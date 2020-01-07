@@ -20,9 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_subdirectory(angelscript)
-add_subdirectory(asio)
-add_subdirectory(mysql)
-add_subdirectory(openssl)
-add_subdirectory(TracyProfiler)
-add_subdirectory(type_safe)
+if(NOT TARGET angelscript)
+    add_subdirectory(angelscript)
+endif()
+
+if(NOT TARGET asio)
+    add_subdirectory(asio)
+endif()
+
+if(NOT TARGET mysql)
+    add_subdirectory(mysql)
+endif()
+
+if(NOT TARGET openssl)
+    add_subdirectory(openssl)
+endif()
+
+if(NOT TARGET tracy)
+    add_subdirectory(TracyProfiler)
+endif()
+
+if(NOT TARGET type_safe)
+    add_subdirectory(type_safe)
+endif()

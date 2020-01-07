@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+project(NovusCore-Common)
 
 # CMake >= 3.12
 cmake_minimum_required(VERSION 3.12)
@@ -27,9 +28,8 @@ cmake_minimum_required(VERSION 3.12)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo CACHE STRING "" FORCE)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 set(CMAKE_CXX_STANDARD 17)
-project(NovusCore-Common)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ROOT_FOLDER ${PROJECT_NAME})
@@ -38,5 +38,11 @@ include(cmake/Configuration.cmake)
 include(cmake/FindFiles.cmake)
 
 add_subdirectory(dep)
-add_subdirectory(common)
-add_subdirectory(network-lib)
+
+if(NOT TARGET common)
+    add_subdirectory(common)
+endif()
+
+if(NOT TARGET network)
+    add_subdirectory(network-lib)
+endif()

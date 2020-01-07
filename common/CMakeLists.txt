@@ -20,5 +20,4 @@ target_link_libraries(common PUBLIC
 add_compile_definitions(NOMINMAX _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
 
 # Set VERSION & FOLDER Property
-set_target_properties(common PROPERTIES VERSION ${PROJECT_VERSION})
-set_target_properties(common PROPERTIES FOLDER ${ROOT_FOLDER})
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)
