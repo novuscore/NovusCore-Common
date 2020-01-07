@@ -1,4 +1,5 @@
 project(common VERSION 1.0.0 DESCRIPTION "Common is a static library for NovusCore")
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)
 
 file(GLOB_RECURSE COMMON_FILES "*.cpp" "*.h")
 
@@ -18,6 +19,3 @@ target_link_libraries(common PUBLIC
 )
 
 add_compile_definitions(NOMINMAX _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
-
-# Set VERSION & FOLDER Property
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)

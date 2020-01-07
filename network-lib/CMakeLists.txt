@@ -1,4 +1,5 @@
 project(network VERSION 1.0.0 DESCRIPTION "Network Library")
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)
 
 file(GLOB_RECURSE NETWORK_LIB_FILES "*.cpp" "*.h")
 
@@ -14,7 +15,3 @@ target_link_libraries(network PUBLIC
 )
 
 add_compile_definitions(NOMINMAX _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
-
-# Set VERSION & FOLDER Property
-set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)
