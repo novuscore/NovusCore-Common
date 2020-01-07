@@ -1,12 +1,11 @@
 project(common VERSION 1.0.0 DESCRIPTION "Common is a static library for NovusCore")
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)
-
-file(GLOB_RECURSE COMMON_FILES "*.cpp" "*.h")
 
 add_subdirectory(Dependencies)
+file(GLOB_RECURSE COMMON_FILES "*.cpp" "*.h")
 
 add_library(common ${COMMON_FILES})
 add_library(common::common ALIAS common)
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ROOT_FOLDER}/libs)
 
 find_assign_files(${COMMON_FILES})
 
