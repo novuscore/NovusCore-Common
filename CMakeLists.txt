@@ -34,6 +34,7 @@ project(NovusCore-Common)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ROOT_FOLDER ${PROJECT_NAME})
 
+include(cmake/Configuration.cmake)
 include(cmake/FindFiles.cmake)
 
 add_subdirectory(dep)
