@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2020 NovusCore
+# Copyright (c) 2019 NovusCore
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(NOT TARGET angelscript)
-    add_subdirectory(angelscript)
-endif()
+project(taskflow VERSION 1.0.0)
 
-if(NOT TARGET asio)
-    add_subdirectory(asio)
-endif()
+add_library(${PROJECT_NAME} INTERFACE)
+add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-if(NOT TARGET mysql)
-    add_subdirectory(mysql)
-endif()
+find_package(Threads)
 
-if(NOT TARGET openssl)
-    add_subdirectory(openssl)
-endif()
-
-if(NOT TARGET tracy)
-    add_subdirectory(TracyProfiler)
-endif()
-
-if(NOT TARGET taskflow)
-    add_subdirectory(taskflow)
-endif()
-
-if(NOT TARGET type_safe)
-    add_subdirectory(type_safe)
-endif()
+target_include_directories(${PROJECT_NAME} INTERFACE "${CMAKE_CURRENT_LIST_DIR}")
+target_link_libraries(${PROJECT_NAME} INTERFACE "${CMAKE_THREAD_LIBS_INIT}")
