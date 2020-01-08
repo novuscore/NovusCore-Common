@@ -7,6 +7,10 @@
 #include "InputQueue.h"
 #include "NetPacket.h"
 
+void Connection::Listen()
+{
+    _baseSocket->AsyncRead();
+}
 void Connection::Connect(tcp::endpoint endpoint)
 {
     try
@@ -40,17 +44,28 @@ void Connection::Connect(std::string address, u16 port)
     }
     _baseSocket->AsyncRead();
 }
+void Connection::HandleConnect()
+{
+    Listen();
+}
+void Connection::HandleDisconnect()
+{
+    Message packetMessage;
+    packetMessage.code = MSG_IN_NET_DISCONNECT;
+    packetMessage.objects.push_back(new u64(_identity));
 
+    InputQueue::PassMessage(packetMessage);
+}
 void Connection::HandleRead()
 {
     std::shared_ptr<ByteBuffer> buffer = _baseSocket->GetReceiveBuffer();
 
     while (buffer->GetActiveSize())
     {
-        u32 opcode = 0;
+        u16 opcode = 0;
         u16 size = 0;
 
-        buffer->GetU32(opcode);
+        buffer->GetU16(opcode);
         buffer->GetU16(size);
 
         if (size > 8192)
@@ -64,7 +79,6 @@ void Connection::HandleRead()
         netPacket->data = ByteBuffer::Borrow<4096>();
         netPacket->data->Size = size;
         netPacket->data->WrittenData = size;
-        netPacket->data->IsOwner = true;
         std::memcpy(netPacket->data->GetInternalData(), buffer->GetReadPointer(), size);
         buffer->ReadData += size;
 

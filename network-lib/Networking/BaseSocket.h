@@ -32,8 +32,8 @@
 class BaseSocket : public std::enable_shared_from_this<BaseSocket>
 {
 public:
-    BaseSocket(asio::ip::tcp::socket* socket) : _isClosed(false), _socket(socket), _handleRead(nullptr) { Init(); }       
-    BaseSocket(asio::ip::tcp::socket* socket, std::function<void(void)> handleRead) : _isClosed(false), _socket(socket), _handleRead(handleRead) { Init(); }
+    using tcp = asio::ip::tcp;  
+    BaseSocket(tcp::socket* socket, std::function<void(void)> readHandler = nullptr, std::function<void(void)> disconnectHandler = nullptr) : _isClosed(false), _socket(socket), _readHandler(readHandler), _disconnectHandler(disconnectHandler) { Init(); }
     ~BaseSocket() { }
 
     void Init()
@@ -52,7 +52,7 @@ public:
         }
 
         _receiveBuffer->WrittenData += bytesRead;
-        _handleRead();
+        _readHandler();
     }
     void _internalWrite(asio::error_code errorCode, std::size_t bytesWritten)
     {
@@ -79,25 +79,32 @@ public:
         }
     }
 
-    bool IsClosed() { return _isClosed; }
+    bool IsClosed() { return _isClosed || !_socket->is_open(); }
     void Close(asio::error_code error)
     {
+        _disconnectHandler();
+
         _socket->close();
         _isClosed = true;
     }
-    asio::ip::tcp::socket* socket()
+    tcp::socket* socket()
     {
         return _socket;
     }
-    void SetReadHandler(std::function<void(void)> handleRead)
+    void SetReadHandler(std::function<void(void)> readHandler)
     {
-        _handleRead = handleRead;
+        _readHandler = readHandler;
+    }
+    void SetDisconnectHandler(std::function<void(void)> disconnectHandler)
+    {
+        _disconnectHandler = disconnectHandler;
     }
 private:
     std::shared_ptr<ByteBuffer> _receiveBuffer;
     std::shared_ptr<ByteBuffer> _sendBuffer;
 
     bool _isClosed = false;
-    asio::ip::tcp::socket* _socket;
-    std::function<void(void)> _handleRead;
+    tcp::socket* _socket;
+    std::function<void(void)> _readHandler;
+    std::function<void(void)> _disconnectHandler;
 };

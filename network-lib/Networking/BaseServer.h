@@ -14,6 +14,7 @@ public:
 
     void Start();
     void Stop();
+    void Listen();
     void Run();
     void HandleNewConnection(tcp::socket* socket, const asio::error_code& error);
 

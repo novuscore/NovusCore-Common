@@ -31,8 +31,9 @@ enum InputMessages
     MSG_IN_EXIT,
     MSG_IN_PRINT,
     MSG_IN_PING,
+    MSG_OUT_SETUP_COMPLETE,
     MSG_IN_NET_PACKET,
-    MSG_OUT_SETUP_COMPLETE
+    MSG_IN_NET_DISCONNECT,
 };
 
 enum OutputMessages
