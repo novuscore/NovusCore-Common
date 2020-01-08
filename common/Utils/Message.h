@@ -24,6 +24,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include <string>
+#include <vector>
 
 enum InputMessages
 {
@@ -46,10 +47,10 @@ struct Message
     {
         code = -1;
         message = nullptr;
-        object = nullptr;
+        objects.reserve(8);
     }
 
     i32 code;
     std::string* message;
-    void* object;
+    std::vector<void*> objects;
 };

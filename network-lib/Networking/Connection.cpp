@@ -5,20 +5,36 @@
 #include <Utils/DebugHandler.h>
 
 #include "InputQueue.h"
-#include "MessageHandler.h"
+#include "NetPacket.h"
 
-void Connection::Start()
+void Connection::Connect(tcp::endpoint endpoint)
 {
     try
     {
-        _baseSocket->socket()->connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 3724));
+        _baseSocket->socket()->connect(endpoint);
+    }
+    catch (std::exception e)
+    {
+        Message packetMessage;
+        packetMessage.code = MSG_IN_PRINT;
+        packetMessage.message = new std::string("Failed to connect to host");
+
+        InputQueue::PassMessage(packetMessage);
+    }
+    _baseSocket->AsyncRead();
+}
+void Connection::Connect(std::string address, u16 port)
+{
+    try
+    {
+        _baseSocket->socket()->connect(tcp::endpoint(asio::ip::address::from_string(address), port));
     }
     catch (std::exception e)
     {
 
         Message packetMessage;
         packetMessage.code = MSG_IN_PRINT;
-        packetMessage.message = new std::string("Failed to connect to: 127.0.0.1:3724");
+        packetMessage.message = new std::string("Failed to connect to host");
 
         InputQueue::PassMessage(packetMessage);
     }
@@ -37,16 +53,15 @@ void Connection::HandleRead()
         buffer->GetU32(opcode);
         buffer->GetU16(size);
 
-        if (opcode > OpcodeCount || size > 8192)
+        if (size > 8192)
         {
             _baseSocket->Close(asio::error::shut_down);
             return;
         }
 
-        // Handle NetPacket
         NetPacket* netPacket = new NetPacket();
         netPacket->opcode = opcode;
-        netPacket->data = ByteBuffer::Borrow<8192>();
+        netPacket->data = ByteBuffer::Borrow<4096>();
         netPacket->data->Size = size;
         netPacket->data->WrittenData = size;
         netPacket->data->IsOwner = true;
@@ -55,7 +70,8 @@ void Connection::HandleRead()
 
         Message packetMessage;
         packetMessage.code = MSG_IN_NET_PACKET;
-        packetMessage.object = netPacket;
+        packetMessage.objects.push_back(this);
+        packetMessage.objects.push_back(netPacket);
 
         InputQueue::PassMessage(packetMessage);
     }
