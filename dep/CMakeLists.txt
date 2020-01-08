@@ -40,6 +40,11 @@ if(NOT TARGET tracy)
     add_subdirectory(TracyProfiler)
 endif()
 
+
+if(NOT TARGET Entt)
+    add_subdirectory(Entt)
+endif()
+
 if(NOT TARGET taskflow)
     add_subdirectory(taskflow)
 endif()
