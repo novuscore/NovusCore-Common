@@ -11,7 +11,7 @@ void Connection::Listen()
 {
     _baseSocket->AsyncRead();
 }
-void Connection::Connect(tcp::endpoint endpoint)
+bool Connection::Connect(tcp::endpoint endpoint)
 {
     try
     {
@@ -19,30 +19,14 @@ void Connection::Connect(tcp::endpoint endpoint)
     }
     catch (std::exception e)
     {
-        Message packetMessage;
-        packetMessage.code = MSG_IN_PRINT;
-        packetMessage.message = new std::string("Failed to connect to host");
-
-        InputQueue::PassMessage(packetMessage);
+        return false;
     }
     _baseSocket->AsyncRead();
+    return true;
 }
-void Connection::Connect(std::string address, u16 port)
+bool Connection::Connect(std::string address, u16 port)
 {
-    try
-    {
-        _baseSocket->socket()->connect(tcp::endpoint(asio::ip::address::from_string(address), port));
-    }
-    catch (std::exception e)
-    {
-
-        Message packetMessage;
-        packetMessage.code = MSG_IN_PRINT;
-        packetMessage.message = new std::string("Failed to connect to host");
-
-        InputQueue::PassMessage(packetMessage);
-    }
-    _baseSocket->AsyncRead();
+    return Connect(tcp::endpoint(asio::ip::address::from_string(address), port));
 }
 void Connection::HandleConnect()
 {
@@ -83,7 +67,7 @@ void Connection::HandleRead()
         buffer->ReadData += size;
 
         Message packetMessage;
-        packetMessage.code = MSG_IN_NET_PACKET;
+        packetMessage.code = IsInternal() ? InputMessages::MSG_IN_INTERNAL_NET_PACKET : InputMessages::MSG_IN_NET_PACKET;
         packetMessage.objects.push_back(this);
         packetMessage.objects.push_back(netPacket);
 

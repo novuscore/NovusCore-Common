@@ -298,14 +298,14 @@ public:
         WrittenData += writeSize;
         return true;
     }
-    bool PutBytes(u8* val, size_t Size)
+    bool PutBytes(u8* val, size_t size)
     {
         assert(_data != nullptr);
 
-        if (!CanPerformWrite(Size))
+        if (!CanPerformWrite(size))
             return false;
 
-        std::memcpy(&_data[WrittenData], val, Size);
+        std::memcpy(&_data[WrittenData], val, size);
         WrittenData += Size;
         return true;
     }

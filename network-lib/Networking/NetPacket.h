@@ -1,5 +1,6 @@
+#pragma once
 #include <NovusTypes.h>
-#include <Utils\ByteBuffer.h>
+#include <Utils/ByteBuffer.h>
 
 struct NetPacket
 {

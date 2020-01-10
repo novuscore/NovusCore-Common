@@ -65,6 +65,7 @@ void BaseServer::HandleNewConnection(tcp::socket* socket, const asio::error_code
             socket->set_option(tcp::no_delay(true));
 
             std::shared_ptr<Connection> connection = std::make_shared<Connection>(socket);
+            connection->SetInternal(_isInternal);
             connection->HandleConnect();
             _connections.push_back(connection);
         }

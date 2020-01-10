@@ -7,7 +7,7 @@ class BaseServer
 {
 public:
     using tcp = asio::ip::tcp;
-    BaseServer(asio::io_service& ioService, i16 port) : _ioService(ioService), _acceptor(ioService, tcp::endpoint(tcp::v4(), port))
+    BaseServer(asio::io_service& ioService, i16 port, bool isInternal = false) : _ioService(ioService), _acceptor(ioService, tcp::endpoint(tcp::v4(), port)), _isRunning(false), _isInternal(isInternal)
     {
         _connections.reserve(4096);
     }
@@ -26,6 +26,7 @@ private:
 
     std::mutex _mutex;
     std::thread runThread;
-    bool _isRunning = false;
+    bool _isRunning;
+    bool _isInternal;
     std::vector<std::shared_ptr<Connection>> _connections;
 };
