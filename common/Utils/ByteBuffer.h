@@ -455,7 +455,7 @@ public:
     size_t Size = 0;
     bool IsOwner = false;
 
-    u8* GetInternalData() { return _data; }
+    u8* GetDataPointer() { return _data; }
     u8* GetReadPointer() { return _data + ReadData; }
     u8* GetWritePointer() { return _data + WrittenData; }
 

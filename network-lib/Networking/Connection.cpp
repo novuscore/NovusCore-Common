@@ -5,7 +5,7 @@
 #include <Utils/DebugHandler.h>
 
 #include "InputQueue.h"
-#include "NetPacket.h"
+#include "Packet.h"
 
 void Connection::Listen()
 {
@@ -58,20 +58,41 @@ void Connection::HandleRead()
             return;
         }
 
-        NetPacket* netPacket = new NetPacket();
-        netPacket->opcode = opcode;
-        netPacket->data = ByteBuffer::Borrow<4096>();
-        netPacket->data->Size = size;
-        netPacket->data->WrittenData = size;
-        std::memcpy(netPacket->data->GetInternalData(), buffer->GetReadPointer(), size);
-        buffer->ReadData += size;
+        Packet* packet = new Packet();
+        {
+            // Header
+            {
+                packet->header.opcode = opcode;
+                packet->header.size = size;
+            }
+
+            // Payload
+            {
+                packet->payload = ByteBuffer::Borrow<4096>();
+                packet->payload->Size = size;
+                packet->payload->WrittenData = size;
+                std::memcpy(packet->payload->GetDataPointer(), buffer->GetReadPointer(), size);
+            }
+
+            packet->connection = std::make_shared<Connection>(*this);
+        }
 
         Message packetMessage;
-        packetMessage.code = IsInternal() ? InputMessages::MSG_IN_INTERNAL_NET_PACKET : InputMessages::MSG_IN_NET_PACKET;
-        packetMessage.objects.push_back(this);
-        packetMessage.objects.push_back(netPacket);
+        {
+            if (IsInternal())
+            {
+                packetMessage.code = InputMessages::MSG_IN_INTERNAL_NET_PACKET;
+            }
+            else
+            {
+                packetMessage.code = InputMessages::MSG_IN_NET_PACKET;
+            }
 
-        InputQueue::PassMessage(packetMessage);
+            packetMessage.objects.push_back(packet);
+            InputQueue::PassMessage(packetMessage);
+        }
+
+        buffer->ReadData += size;
     }
 
     _baseSocket->AsyncRead();

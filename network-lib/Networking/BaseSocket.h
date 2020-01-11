@@ -74,7 +74,7 @@ public:
     {
         if (!buffer->IsEmpty() || buffer->IsFull())
         {
-            _socket->async_write_some(asio::buffer(buffer->GetInternalData(), buffer->WrittenData),
+            _socket->async_write_some(asio::buffer(buffer->GetDataPointer(), buffer->WrittenData),
                 std::bind(&BaseSocket::_internalWrite, this, std::placeholders::_1, std::placeholders::_2));
         }
     }
