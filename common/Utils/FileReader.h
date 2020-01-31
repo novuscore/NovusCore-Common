@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 #include <fstream>
-#include "../Networking/ByteBuffer.h"
+#include "ByteBuffer.h"
 
 class FileReader
 {
@@ -30,7 +30,7 @@ public:
         if (_length == 0)
             return;
 
-        _fileStream.read(reinterpret_cast<char*>(buffer.GetInternalData()), length);
+        _fileStream.read(reinterpret_cast<char*>(buffer.GetDataPointer()), length);
     }
 
     std::string Path() { return _path; }
