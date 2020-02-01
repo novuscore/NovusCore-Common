@@ -36,7 +36,7 @@ void Connection::HandleDisconnect()
 {
     Message packetMessage;
     packetMessage.code = MSG_IN_NET_DISCONNECT;
-    packetMessage.objects.push_back(new u64(_identity));
+    packetMessage.object = new u64(_identity);
 
     InputQueue::PassMessage(packetMessage);
 }
@@ -52,7 +52,7 @@ void Connection::HandleRead()
         buffer->GetU16(opcode);
         buffer->GetU16(size);
 
-        if (size > 8192)
+        if (size > 4096)
         {
             _baseSocket->Close(asio::error::shut_down);
             return;
@@ -88,7 +88,7 @@ void Connection::HandleRead()
                 packetMessage.code = InputMessages::MSG_IN_NET_PACKET;
             }
 
-            packetMessage.objects.push_back(packet);
+            packetMessage.object = packet;
             InputQueue::PassMessage(packetMessage);
         }
 

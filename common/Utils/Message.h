@@ -31,10 +31,10 @@ enum InputMessages
     MSG_IN_EXIT,
     MSG_IN_PRINT,
     MSG_IN_PING,
-    MSG_OUT_SETUP_COMPLETE,
-    MSG_IN_NET_PACKET,
-    MSG_IN_INTERNAL_NET_PACKET,
+    MSG_IN_NET_CONNECT,
     MSG_IN_NET_DISCONNECT,
+    MSG_IN_NET_PACKET,
+    MSG_IN_INTERNAL_NET_PACKET
 };
 
 enum OutputMessages
@@ -49,10 +49,10 @@ struct Message
     {
         code = -1;
         message = nullptr;
-        objects.reserve(8);
+        object = nullptr;
     }
 
     i32 code;
     std::string* message;
-    std::vector<void*> objects;
+    void* object;
 };

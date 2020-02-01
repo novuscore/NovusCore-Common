@@ -1,4 +1,6 @@
 #include "BaseServer.h"
+#include "InputQueue.h"
+
 #include <Utils/Timer.h>
 
 void BaseServer::Start()
@@ -21,7 +23,7 @@ void BaseServer::Stop()
 }
 void BaseServer::Listen()
 {
-    tcp::socket* socket = new tcp::socket(_ioService);
+    tcp::socket* socket = new tcp::socket(*_ioService.get());
     _acceptor.async_accept(*socket, std::bind(&BaseServer::HandleNewConnection, this, socket, std::placeholders::_1));
 }
 void BaseServer::Run()
@@ -45,6 +47,7 @@ void BaseServer::Run()
         }
         _mutex.unlock();
 
+        // This sacrifices percision for performance, but we don't need precision here
         f32 deltaTime = timer.GetDeltaTime();
         if (deltaTime <= targetDelta)
         {
@@ -64,10 +67,10 @@ void BaseServer::HandleNewConnection(tcp::socket* socket, const asio::error_code
             socket->set_option(asio::socket_base::receive_buffer_size(4096));
             socket->set_option(tcp::no_delay(true));
 
-            std::shared_ptr<Connection> connection = std::make_shared<Connection>(socket);
-            connection->SetInternal(_isInternal);
-            connection->HandleConnect();
-            _connections.push_back(connection);
+            Message newSocketMessage;
+            newSocketMessage.code = InputMessages::MSG_IN_NET_CONNECT;
+            newSocketMessage.object = socket;
+            InputQueue::PassMessage(newSocketMessage);
         }
         _mutex.unlock();
     }

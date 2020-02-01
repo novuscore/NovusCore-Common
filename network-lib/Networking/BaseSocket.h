@@ -29,6 +29,7 @@
 #include <asio/placeholders.hpp>
 #include <Utils/ByteBuffer.h>
 
+#define NETWORK_BUFFER_SIZE 4096
 class BaseSocket : public std::enable_shared_from_this<BaseSocket>
 {
 public:
@@ -38,8 +39,8 @@ public:
 
     void Init()
     {
-        _receiveBuffer = ByteBuffer::Borrow<4096>();
-        _sendBuffer = ByteBuffer::Borrow<4096>();
+        _receiveBuffer = ByteBuffer::Borrow<NETWORK_BUFFER_SIZE>();
+        _sendBuffer = ByteBuffer::Borrow<NETWORK_BUFFER_SIZE>();
     }
 
     std::shared_ptr<ByteBuffer> GetReceiveBuffer() { return _receiveBuffer; }
