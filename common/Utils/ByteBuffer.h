@@ -96,15 +96,15 @@ public:
         ReadData += readSize;
         return true;
     }
-    bool GetBytes(u8* dest, size_t Size)
+    bool GetBytes(u8* dest, size_t size)
     {
         assert(_data != nullptr);
 
-        if (!CanPerformRead(Size))
+        if (!CanPerformRead(size))
             return false;
 
-        std::memcpy(dest, &_data[ReadData], Size);
-        ReadData += Size;
+        std::memcpy(dest, &_data[ReadData], size);
+        ReadData += size;
         return true;
     }
     bool GetI16(i16& val)
@@ -306,7 +306,7 @@ public:
             return false;
 
         std::memcpy(&_data[WrittenData], val, size);
-        WrittenData += Size;
+        WrittenData += size;
         return true;
     }
     bool PutI16(i16 val)

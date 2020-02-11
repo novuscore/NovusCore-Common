@@ -83,10 +83,13 @@ public:
     bool IsClosed() { return _isClosed || !_socket->is_open(); }
     void Close(asio::error_code error)
     {
-        _disconnectHandler();
+        if (!_isClosed)
+        {
+            _disconnectHandler();
 
-        _socket->close();
-        _isClosed = true;
+            _socket->close();
+            _isClosed = true;
+        }
     }
     tcp::socket* socket()
     {
