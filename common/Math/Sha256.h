@@ -9,16 +9,14 @@ public:
     void Init();
     void Update(const u8* data, size_t size);
     void Update(const std::string& string);
-    void Update(BigNumber* bigNumber);
-    void Final();
+    void Final(u8* dest = nullptr);
 
     // Hash functions as Init -> Update -> Final (In case we just need to fire update once)
-    void Hash(const u8* data, size_t length);
-    void Hash(const std::string& string);
-    void Hash(size_t size, ...);
+    void Hash(const u8* data, size_t length, u8* dest = nullptr);
+    void Hash(const std::string& string, u8* dest = nullptr);
 
     u8* GetData() { return _data; }
-    static const u32 SHA256_BLOCK_SIZE = 64;
+    static const u32 OUTPUT_SiZE = SHA256_DIGEST_LENGTH;
 private:
     SHA256_CTX _state;
     u8 _data[SHA256_DIGEST_LENGTH];
