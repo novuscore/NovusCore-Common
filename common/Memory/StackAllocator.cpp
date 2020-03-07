@@ -23,6 +23,7 @@
     SOFTWARE.
     */
 #include "StackAllocator.h"
+#include <Utils/DebugHandler.h>
 #include <stdlib.h>
 #include <algorithm>
 #ifdef _DEBUG
@@ -41,7 +42,8 @@ namespace Memory
     void StackAllocator::Init() 
     {
         assert(!_initialized); // We already initialized this allocator!
-        if (_startPtr != nullptr) {
+        if (_startPtr != nullptr) 
+        {
             free(_startPtr);
         }
         _startPtr = malloc(_totalSize);
@@ -95,7 +97,7 @@ namespace Memory
 
         if (_offset + padding + size > _totalSize) 
         {
-            assert(false); // We overflowed our allocator
+            NC_LOG_FATAL("We overflowed our allocator");
 
             return nullptr;
         }
@@ -121,22 +123,9 @@ namespace Memory
         return (void*)(nextAddress);
     }
 
-    void StackAllocator::Free(void* ptr) 
+    void StackAllocator::Free(void* /*ptr*/) 
     {
-        // Move offset back to clear address
-        const std::size_t currentAddress = (std::size_t) ptr;
-        const std::size_t headerAddress = currentAddress - sizeof(AllocationHeader);
-        const AllocationHeader* allocationHeader{ (AllocationHeader*)headerAddress };
-
-        _offset = currentAddress - allocationHeader->padding - (std::size_t) _startPtr;
-        _used = _offset;
-
-#ifdef _DEBUG
-        if (_debug)
-        {
-            std::cout << _name << "\tFreed " << "\t@C " << (void*)currentAddress << "\t@F " << (void*)((char*)_startPtr + _offset) << "\tO " << _offset << std::endl;
-        }
-#endif
+        
     }
 
     void StackAllocator::Reset() 
@@ -144,5 +133,12 @@ namespace Memory
         _offset = 0;
         _used = 0;
         _peak = 0;
+
+#ifdef _DEBUG
+        if (_debug)
+        {
+            std::cout << _name << "\tReset " << std::endl;
+        }
+#endif
     }
 }

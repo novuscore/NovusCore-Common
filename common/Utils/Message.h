@@ -34,7 +34,8 @@ enum InputMessages
     MSG_IN_NET_CONNECT,
     MSG_IN_NET_DISCONNECT,
     MSG_IN_NET_PACKET,
-    MSG_IN_INTERNAL_NET_PACKET
+    MSG_IN_INTERNAL_NET_PACKET,
+    MSG_IN_RELOAD
 };
 
 enum OutputMessages
