@@ -462,7 +462,7 @@ public:
     template <size_t size>
     static std::shared_ptr<ByteBuffer> Borrow()
     {
-        static_assert(size <= 32768);
+        static_assert(size <= 1048576);
 
         if constexpr (size <= 128)
         {
@@ -562,6 +562,76 @@ public:
 
             return buffer;
         }
+        else if constexpr (size <= 65536)
+        {
+            if (_byteBuffer65536.empty())
+            {
+                ByteBuffer* newDataStore = new ByteBuffer(nullptr, 65536);
+                _byteBuffer65536.add(std::unique_ptr<ByteBuffer>(newDataStore));
+            }
+
+            std::shared_ptr<ByteBuffer> buffer = _byteBuffer65536.acquire();
+            buffer->Size = size;
+            buffer->Reset();
+
+            return buffer;
+        }
+        else if constexpr (size <= 131072)
+        {
+            if (_byteBuffer131072.empty())
+            {
+                ByteBuffer* newDataStore = new ByteBuffer(nullptr, 131072);
+                _byteBuffer131072.add(std::unique_ptr<ByteBuffer>(newDataStore));
+            }
+
+            std::shared_ptr<ByteBuffer> buffer = _byteBuffer131072.acquire();
+            buffer->Size = size;
+            buffer->Reset();
+
+            return buffer;
+        }
+        else if constexpr (size <= 262144)
+        {
+            if (_byteBuffer262144.empty())
+            {
+                ByteBuffer* newDataStore = new ByteBuffer(nullptr, 262144);
+                _byteBuffer262144.add(std::unique_ptr<ByteBuffer>(newDataStore));
+            }
+
+            std::shared_ptr<ByteBuffer> buffer = _byteBuffer262144.acquire();
+            buffer->Size = size;
+            buffer->Reset();
+
+            return buffer;
+        }
+        else if constexpr (size <= 524288)
+        {
+            if (_byteBuffer524288.empty())
+            {
+                ByteBuffer* newDataStore = new ByteBuffer(nullptr, 524288);
+                _byteBuffer524288.add(std::unique_ptr<ByteBuffer>(newDataStore));
+            }
+
+            std::shared_ptr<ByteBuffer> buffer = _byteBuffer524288.acquire();
+            buffer->Size = size;
+            buffer->Reset();
+
+            return buffer;
+        }
+        else if constexpr (size <= 1048576)
+        {
+            if (_byteBuffer1048576.empty())
+            {
+                ByteBuffer* newDataStore = new ByteBuffer(nullptr, 1048576);
+                _byteBuffer1048576.add(std::unique_ptr<ByteBuffer>(newDataStore));
+            }
+
+            std::shared_ptr<ByteBuffer> buffer = _byteBuffer1048576.acquire();
+            buffer->Size = size;
+            buffer->Reset();
+
+            return buffer;
+        }
     }
 
 private:
@@ -574,4 +644,10 @@ private:
     static SharedPool<ByteBuffer> _byteBuffer8192;
     static SharedPool<ByteBuffer> _byteBuffer16384;
     static SharedPool<ByteBuffer> _byteBuffer32768;
+    static SharedPool<ByteBuffer> _byteBuffer65536;
+    static SharedPool<ByteBuffer> _byteBuffer131072;
+    static SharedPool<ByteBuffer> _byteBuffer262144;
+    static SharedPool<ByteBuffer> _byteBuffer524288;
+    static SharedPool<ByteBuffer> _byteBuffer1048576;
+
 };
