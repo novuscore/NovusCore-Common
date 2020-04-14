@@ -56,6 +56,15 @@ target_include_directories(robin-hood-hashing INTERFACE
     "${CMAKE_CURRENT_LIST_DIR}/robin-hood-hashing"
 )
 
+## GLM math library
+
+add_library(glm INTERFACE)
+add_library(glm::glm ALIAS glm)
+
+target_include_directories(glm INTERFACE
+    "${CMAKE_CURRENT_LIST_DIR}/glm"
+)
+
 ## common_deps
 
 add_library(${PROJECT_NAME} INTERFACE)
@@ -66,4 +75,5 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
     amy::amy
     json::json
     robin-hood-hashing::robin-hood-hashing
+    glm::glm
 )

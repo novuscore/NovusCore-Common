@@ -32,12 +32,12 @@ const float INV_TAU = 1.0f / TAU;
 
 float Sqrt(float in);
 
-inline float DegToRad(float deg)
+constexpr float DegToRad(float deg)
 {
     return (deg * PI) / 180.0f;
 }
 
-inline float RadToDeg(float rad)
+constexpr float RadToDeg(float rad)
 {
     return (rad * 180.0f) / PI;
 }

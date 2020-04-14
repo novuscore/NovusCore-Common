@@ -24,12 +24,11 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <string>
 
-#include "Math/Vector2.h"
-#include "Math/Vector2i.h"
-#include "Math/Vector3.h"
-#include "Math/Vector4.h"
-#include "Math/Matrix.h"
+#include <glm/glm.hpp>
+#include "Math/Math.h"
+#include "Math/Color.h"
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -41,3 +40,11 @@ typedef int32_t i32;
 typedef int64_t i64;
 typedef float f32;
 typedef double f64;
+
+using vec2 = glm::vec2;
+using ivec2 = glm::ivec2;
+using vec3 = glm::vec3;
+using ivec3 = glm::ivec3;
+using vec4 = glm::vec4;
+using ivec4 = glm::ivec4;
+using mat4x4 = glm::mat4x4;
