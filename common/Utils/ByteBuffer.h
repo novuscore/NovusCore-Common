@@ -12,7 +12,7 @@ public:
         if (inData == nullptr)
         {
             _data = new u8[inSize];
-            IsOwner = true;
+            isOwner = true;
         }
         else
         {
@@ -23,7 +23,7 @@ public:
     }
     ~ByteBuffer()
     {
-        if (IsOwner)
+        if (isOwner)
         {
             delete[] _data;
             _data = nullptr;
@@ -453,7 +453,8 @@ public:
     size_t WrittenData = 0;
     size_t ReadData = 0;
     size_t Size = 0;
-    bool IsOwner = false;
+    bool isOwner = false;
+    void SetIsOwner(bool state) { isOwner = state; }
 
     u8* GetDataPointer() { return _data; }
     u8* GetReadPointer() { return _data + ReadData; }
