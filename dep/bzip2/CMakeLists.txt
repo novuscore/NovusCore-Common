@@ -1,6 +1,6 @@
 # MIT License
 
-# Copyright (c) 2020 NovusCore
+# Copyright (c) 2018-2019 NovusCore
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,46 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(NOT TARGET angelscript)
-    add_subdirectory(angelscript)
-endif()
+project(bzip2 VERSION 1.0.0)
 
-if(NOT TARGET asio)
-    add_subdirectory(asio)
-endif()
+if (UNIX OR APPLE)
+    find_package(BZip2 REQUIRED)
 
-if(NOT TARGET mysql)
-    add_subdirectory(mysql)
-endif()
+    add_library(${PROJECT_NAME} INTERFACE)
+    add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-if(NOT TARGET openssl)
-    add_subdirectory(openssl)
-endif()
+    target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE "${BZIP2_INCLUDE_DIRS}")
+    target_link_libraries(${PROJECT_NAME} INTERFACE "${BZIP2_LIBRARIES}")
+else()
+    file(GLOB sources *.c)
+    add_library(${PROJECT_NAME} STATIC ${sources})
+    add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-if(NOT TARGET tracy)
-    add_subdirectory(TracyProfiler)
-endif()
-
-if(NOT TARGET Entt)
-    add_subdirectory(Entt)
-endif()
-
-if(NOT TARGET taskflow)
-    add_subdirectory(taskflow)
-endif()
-
-if(NOT TARGET type_safe)
-    add_subdirectory(type_safe)
-endif()
-
-if(NOT TARGET bzip2)
-    add_subdirectory(bzip2)
-endif()
-
-if(NOT TARGET zlib)
-    add_subdirectory(zlib)
-endif()
-
-if(NOT TARGET libmpq)
-    add_subdirectory(libmpq)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "${ROOT_FOLDER}/dep")
 endif()
