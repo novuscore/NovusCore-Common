@@ -61,7 +61,7 @@ public:
         return true;
     }
     template <typename T>
-    bool Get(T& val, size_t offset)
+    bool Get(T& val, size_t& offset, bool incrementOffset = false)
     {
         assert(_data != nullptr);
 
@@ -70,6 +70,9 @@ public:
             return false;
 
         val = *reinterpret_cast<T const*>(&_data[offset]);
+
+        if (incrementOffset)
+            offset += readSize;
         return true;
     }
     bool GetI8(i8& val)
