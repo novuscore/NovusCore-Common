@@ -2,7 +2,6 @@
 #define ENTT_CORE_MONOSTATE_HPP
 
 
-#include <cassert>
 #include "../config/config.h"
 
 
@@ -59,4 +58,4 @@ inline monostate<Value> monostate_v = {};
 }
 
 
-#endif // ENTT_CORE_MONOSTATE_HPP
+#endif

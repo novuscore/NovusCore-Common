@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <numeric>
 #include <utility>
 #include <vector>
 #include <cstddef>
@@ -48,13 +47,13 @@ namespace entt {
  * @tparam Type Type of objects assigned to the entities.
  */
 template<typename Entity, typename Type, typename = std::void_t<>>
-class basic_storage: public sparse_set<Entity> {
+class storage: public sparse_set<Entity> {
     using underlying_type = sparse_set<Entity>;
     using traits_type = entt_traits<std::underlying_type_t<Entity>>;
 
     template<bool Const>
     class iterator {
-        friend class basic_storage<Entity, Type>;
+        friend class storage<Entity, Type>;
 
         using instance_type = std::conditional_t<Const, const std::vector<Type>, std::vector<Type>>;
         using index_type = typename traits_type::difference_type;
@@ -78,7 +77,7 @@ class basic_storage: public sparse_set<Entity> {
 
         iterator operator++(int) ENTT_NOEXCEPT {
             iterator orig = *this;
-            return ++(*this), orig;
+            return operator++(), orig;
         }
 
         iterator & operator--() ENTT_NOEXCEPT {
@@ -87,7 +86,7 @@ class basic_storage: public sparse_set<Entity> {
 
         iterator operator--(int) ENTT_NOEXCEPT {
             iterator orig = *this;
-            return --(*this), orig;
+            return operator--(), orig;
         }
 
         iterator & operator+=(const difference_type value) ENTT_NOEXCEPT {
@@ -277,12 +276,12 @@ public:
      * @param entt A valid entity identifier.
      * @return The object associated with the entity.
      */
-    const object_type & get(const entity_type entt) const ENTT_NOEXCEPT {
+    const object_type & get(const entity_type entt) const {
         return instances[underlying_type::index(entt)];
     }
 
     /*! @copydoc get */
-    object_type & get(const entity_type entt) ENTT_NOEXCEPT {
+    object_type & get(const entity_type entt) {
         return const_cast<object_type &>(std::as_const(*this).get(entt));
     }
 
@@ -291,12 +290,12 @@ public:
      * @param entt A valid entity identifier.
      * @return The object associated with the entity, if any.
      */
-    const object_type * try_get(const entity_type entt) const ENTT_NOEXCEPT {
+    const object_type * try_get(const entity_type entt) const {
         return underlying_type::has(entt) ? (instances.data() + underlying_type::index(entt)) : nullptr;
     }
 
     /*! @copydoc try_get */
-    object_type * try_get(const entity_type entt) ENTT_NOEXCEPT {
+    object_type * try_get(const entity_type entt) {
         return const_cast<object_type *>(std::as_const(*this).try_get(entt));
     }
 
@@ -316,27 +315,22 @@ public:
      * @tparam Args Types of arguments to use to construct the object.
      * @param entt A valid entity identifier.
      * @param args Parameters to use to construct an object for the entity.
-     * @return The object associated with the entity.
      */
     template<typename... Args>
-    object_type & construct(const entity_type entt, Args &&... args) {
+    void construct(const entity_type entt, Args &&... args) {
         if constexpr(std::is_aggregate_v<object_type>) {
-            instances.emplace_back(Type{std::forward<Args>(args)...});
+            instances.push_back(Type{std::forward<Args>(args)...});
         } else {
             instances.emplace_back(std::forward<Args>(args)...);
         }
 
         // entity goes after component in case constructor throws
         underlying_type::construct(entt);
-        return instances.back();
     }
 
     /**
-     * @brief Assigns one or more entities to a storage and default constructs
-     * or copy constructs their objects.
-     *
-     * The object type must be at least move and default insertable if no
-     * arguments are provided, move and copy insertable otherwise.
+     * @brief Assigns one or more entities to a storage and constructs their
+     * objects from a given instance.
      *
      * @warning
      * Attempting to assign an entity that already belongs to the storage
@@ -344,25 +338,37 @@ public:
      * An assertion will abort the execution at runtime in debug mode if the
      * storage already contains the given entity.
      *
-     * @tparam It Type of forward iterator.
-     * @tparam Args Types of arguments to use to construct the object.
+     * @tparam It Type of input iterator.
      * @param first An iterator to the first element of the range of entities.
      * @param last An iterator past the last element of the range of entities.
-     * @param args Parameters to use to construct an object for the entities.
-     * @return An iterator to the list of instances just created and sorted the
-     * same of the entities.
+     * @param value An instance of the object to construct.
      */
-    template<typename It, typename... Args>
-    iterator_type batch(It first, It last, Args &&... args) {
-        if constexpr(sizeof...(Args) == 0) {
-            instances.resize(instances.size() + std::distance(first, last));
-        } else {
-            instances.resize(instances.size() + std::distance(first, last), Type{std::forward<Args>(args)...});
-        }
+    template<typename It>
+    std::enable_if_t<std::is_same_v<typename std::iterator_traits<It>::value_type, entity_type>, void>
+    construct(It first, It last, const object_type &value = {}) {
+        instances.insert(instances.end(), std::distance(first, last), value);
+        // entities go after components in case constructors throw
+        underlying_type::construct(first, last);
+    }
 
-        // entity goes after component in case constructor throws
-        underlying_type::batch(first, last);
-        return begin();
+    /**
+     * @brief Assigns one or more entities to a storage and constructs their
+     * objects from a given range.
+     *
+     * @sa construct
+     *
+     * @tparam EIt Type of input iterator.
+     * @tparam CIt Type of input iterator.
+     * @param first An iterator to the first element of the range of entities.
+     * @param last An iterator past the last element of the range of entities.
+     * @param value An iterator to the first element of the range of objects.
+     */
+    template<typename EIt, typename CIt>
+    std::enable_if_t<std::is_same_v<typename std::iterator_traits<EIt>::value_type, entity_type>, void>
+    construct(EIt first, EIt last, CIt value) {
+        instances.insert(instances.end(), value, value + std::distance(first, last));
+        // entities go after components in case constructors throw
+        underlying_type::construct(first, last);
     }
 
     /**
@@ -395,7 +401,7 @@ public:
      * @param lhs A valid entity identifier.
      * @param rhs A valid entity identifier.
      */
-    void swap(const entity_type lhs, const entity_type rhs) ENTT_NOEXCEPT override {
+    void swap(const entity_type lhs, const entity_type rhs) override {
         std::swap(instances[underlying_type::index(lhs)], instances[underlying_type::index(rhs)]);
         underlying_type::swap(lhs, rhs);
     }
@@ -466,9 +472,9 @@ public:
         }
     }
 
-    /*! @brief Resets a storage. */
-    void reset() {
-        underlying_type::reset();
+    /*! @brief Clears a storage. */
+    void clear() {
+        underlying_type::clear();
         instances.clear();
     }
 
@@ -477,14 +483,14 @@ private:
 };
 
 
-/*! @copydoc basic_storage */
+/*! @copydoc storage */
 template<typename Entity, typename Type>
-class basic_storage<Entity, Type, std::enable_if_t<ENTT_ENABLE_ETO(Type)>>: public sparse_set<Entity> {
+class storage<Entity, Type, std::enable_if_t<ENTT_ENABLE_ETO(Type)>>: public sparse_set<Entity> {
     using traits_type = entt_traits<std::underlying_type_t<Entity>>;
     using underlying_type = sparse_set<Entity>;
 
     class iterator {
-        friend class basic_storage<Entity, Type>;
+        friend class storage<Entity, Type>;
 
         using index_type = typename traits_type::difference_type;
 
@@ -507,7 +513,7 @@ class basic_storage<Entity, Type, std::enable_if_t<ENTT_ENABLE_ETO(Type)>>: publ
 
         iterator operator++(int) ENTT_NOEXCEPT {
             iterator orig = *this;
-            return ++(*this), orig;
+            return operator++(), orig;
         }
 
         iterator & operator--() ENTT_NOEXCEPT {
@@ -516,7 +522,7 @@ class basic_storage<Entity, Type, std::enable_if_t<ENTT_ENABLE_ETO(Type)>>: publ
 
         iterator operator--(int) ENTT_NOEXCEPT {
             iterator orig = *this;
-            return --(*this), orig;
+            return operator--(), orig;
         }
 
         iterator & operator+=(const difference_type value) ENTT_NOEXCEPT {
@@ -651,15 +657,30 @@ public:
      * @param entt A valid entity identifier.
      * @return The object associated with the entity.
      */
-    object_type get([[maybe_unused]] const entity_type entt) const ENTT_NOEXCEPT {
+    object_type get([[maybe_unused]] const entity_type entt) const {
         ENTT_ASSERT(underlying_type::has(entt));
         return {};
     }
 
     /**
-     * @brief Assigns one or more entities to a storage.
+     * @brief Assigns an entity to a storage and constructs its object.
      *
-     * The object type must be at least default constructible.
+     * @warning
+     * Attempting to use an entity that already belongs to the storage results
+     * in undefined behavior.<br/>
+     * An assertion will abort the execution at runtime in debug mode if the
+     * storage already contains the given entity.
+     *
+     * @tparam Args Types of arguments to use to construct the object.
+     * @param entt A valid entity identifier.
+     */
+    template<typename... Args>
+    void construct(const entity_type entt, Args &&...) {
+        underlying_type::construct(entt);
+    }
+
+    /**
+     * @brief Assigns one or more entities to a storage.
      *
      * @warning
      * Attempting to assign an entity that already belongs to the storage
@@ -667,16 +688,14 @@ public:
      * An assertion will abort the execution at runtime in debug mode if the
      * storage already contains the given entity.
      *
-     * @tparam It Type of forward iterator.
+     * @tparam It Type of input iterator.
      * @param first An iterator to the first element of the range of entities.
      * @param last An iterator past the last element of the range of entities.
-     * @return An iterator to the list of instances just created and sorted the
-     * same of the entities.
      */
     template<typename It>
-    iterator_type batch(It first, It last, const object_type & = {}) {
-        underlying_type::batch(first, last);
-        return begin();
+    std::enable_if_t<std::is_same_v<typename std::iterator_traits<It>::value_type, entity_type>, void>
+    construct(It first, It last, const object_type & = {}) {
+        underlying_type::construct(first, last);
     }
 
     /*! @copydoc storage::sort */
@@ -692,12 +711,8 @@ public:
     }
 };
 
-/*! @copydoc basic_storage */
-template<typename Entity, typename Type>
-struct storage: basic_storage<Entity, Type> {};
-
 
 }
 
 
-#endif // ENTT_ENTITY_STORAGE_HPP
+#endif

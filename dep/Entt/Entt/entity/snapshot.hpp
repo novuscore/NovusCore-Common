@@ -388,7 +388,7 @@ class basic_continuous_loader {
     }
 
     template<typename Other, typename Type, typename Member>
-    void update(Other &instance, Member Type:: *member) {
+    void update([[maybe_unused]] Other &instance, [[maybe_unused]] Member Type:: *member) {
         if constexpr(!std::is_same_v<Other, Type>) {
             return;
         } else if constexpr(std::is_same_v<Member, Entity>) {
@@ -417,7 +417,7 @@ class basic_continuous_loader {
             const auto local = ref.second.first;
 
             if(reg->valid(local)) {
-                reg->template reset<Component>(local);
+                reg->template remove_if_exists<Component>(local);
             }
         }
     }
@@ -602,4 +602,4 @@ private:
 }
 
 
-#endif // ENTT_ENTITY_SNAPSHOT_HPP
+#endif

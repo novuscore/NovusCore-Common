@@ -2,6 +2,7 @@
 #define ENTT_CORE_ALGORITHM_HPP
 
 
+#include <vector>
 #include <utility>
 #include <iterator>
 #include <algorithm>
@@ -140,4 +141,4 @@ struct radix_sort {
 }
 
 
-#endif // ENTT_CORE_ALGORITHM_HPP
+#endif

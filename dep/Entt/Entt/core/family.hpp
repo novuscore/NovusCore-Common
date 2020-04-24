@@ -2,7 +2,6 @@
 #define ENTT_CORE_FAMILY_HPP
 
 
-#include <type_traits>
 #include "../config/config.h"
 
 
@@ -34,4 +33,4 @@ public:
 }
 
 
-#endif // ENTT_CORE_FAMILY_HPP
+#endif

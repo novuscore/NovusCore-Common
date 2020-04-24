@@ -8,6 +8,39 @@
 
 namespace entt {
 
+
+/**
+ * @brief Alias for exclusion lists.
+ * @tparam Type List of types.
+ */
+template<typename... Type>
+struct exclude_t: type_list<Type...> {};
+
+
+/**
+ * @brief Variable template for exclusion lists.
+ * @tparam Type List of types.
+ */
+template<typename... Type>
+constexpr exclude_t<Type...> exclude{};
+
+
+/**
+ * @brief Alias for lists of observed components.
+ * @tparam Type List of types.
+ */
+template<typename... Type>
+struct get_t: type_list<Type...>{};
+
+
+/**
+ * @brief Variable template for lists of observed components.
+ * @tparam Type List of types.
+ */
+template<typename... Type>
+constexpr get_t<Type...> get{};
+
+
 /*! @class basic_registry */
 template <typename>
 class basic_registry;
@@ -48,9 +81,6 @@ class basic_continuous_loader;
 ENTT_OPAQUE_TYPE(entity, ENTT_ID_TYPE);
 
 /*! @brief Alias declaration for the most common use case. */
-ENTT_OPAQUE_TYPE(component, ENTT_ID_TYPE);
-
-/*! @brief Alias declaration for the most common use case. */
 using registry = basic_registry<entity>;
 
 /*! @brief Alias declaration for the most common use case. */
@@ -89,4 +119,4 @@ using group = basic_group<entity, Types...>;
 }
 
 
-#endif // ENTT_ENTITY_FWD_HPP
+#endif

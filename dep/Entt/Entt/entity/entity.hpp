@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <type_traits>
 #include "../config/config.h"
+#include "../core/type_traits.hpp"
 
 
 namespace entt {
@@ -127,7 +128,7 @@ public:
 
     template<typename Entity>
     constexpr bool operator==(const Entity entity) const ENTT_NOEXCEPT {
-        return (to_integer(entity) & traits_type<Entity>::entity_mask) == to_integer(static_cast<Entity>(*this));
+        return (to_integral(entity) & traits_type<Entity>::entity_mask) == to_integral(static_cast<Entity>(*this));
     }
 
     template<typename Entity>
@@ -171,4 +172,4 @@ constexpr auto null = internal::null{};
 }
 
 
-#endif // ENTT_ENTITY_ENTITY_HPP
+#endif
