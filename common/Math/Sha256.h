@@ -1,5 +1,7 @@
 #pragma once
 #include "../NovusTypes.h"
+
+#include <string>
 #include <openssl/sha.h>
 
 class BigNumber;
@@ -7,7 +9,7 @@ class Sha256
 {
 public:
     void Init();
-    void Update(const u8* data, size_t size);
+    void Update(const void* data, size_t size);
     void Update(const std::string& string);
     void Final(u8* dest = nullptr);
 
@@ -16,7 +18,6 @@ public:
     void Hash(const std::string& string, u8* dest = nullptr);
 
     u8* GetData() { return _data; }
-    static const u32 OUTPUT_SiZE = SHA256_DIGEST_LENGTH;
 private:
     SHA256_CTX _state;
     u8 _data[SHA256_DIGEST_LENGTH];

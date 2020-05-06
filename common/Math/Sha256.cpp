@@ -3,10 +3,10 @@
 
 void Sha256::Init()
 {
-	SHA256_Init(&_state);
+    SHA256_Init(&_state);
 }
 
-void Sha256::Update(const u8* data, size_t size)
+void Sha256::Update(const void* data, size_t size)
 {
     SHA256_Update(&_state, data, size);
 }
