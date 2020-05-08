@@ -49,6 +49,8 @@ struct ENTT_API type_id_generator {
  * @brief Types identifiers.
  * @tparam Type Type for which to generate an identifier.
  */
+#pragma warning(push)
+#pragma warning(disable: 4307)
 template<typename Type, typename = void>
 struct ENTT_TYPE_ID_API type_info {
     /**
@@ -58,7 +60,7 @@ struct ENTT_TYPE_ID_API type_info {
 #if defined ENTT_PRETTY_FUNCTION_CONSTEXPR
     static constexpr ENTT_ID_TYPE id() ENTT_NOEXCEPT {
         constexpr auto value = entt::hashed_string::value(ENTT_PRETTY_FUNCTION_CONSTEXPR);
-        return value;
+        return static_cast<ENTT_ID_TYPE>(value);
     }
 #elif defined ENTT_PRETTY_FUNCTION
     static ENTT_ID_TYPE id() ENTT_NOEXCEPT {
@@ -72,7 +74,7 @@ struct ENTT_TYPE_ID_API type_info {
     }
 #endif
 };
-
+#pragma warning(pop)
 
 }
 
