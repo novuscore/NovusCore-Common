@@ -110,6 +110,16 @@ public:
         ReadData += size;
         return true;
     }
+    bool GetBytes(u8* dest, size_t size, size_t offset)
+    {
+        assert(_data != nullptr);
+
+        if (!CanPerformRead(size, offset))
+            return false;
+
+        std::memcpy(dest, &_data[offset], size);
+        return true;
+    }
     bool GetI16(i16& val)
     {
         assert(_data != nullptr);
