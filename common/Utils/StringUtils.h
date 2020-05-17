@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iostream>
 #include <iterator>
+#include <iomanip>
 #include "../NovusTypes.h"
 #ifdef _WINDOWS
 #include <Windows.h>
@@ -16,6 +17,38 @@
 
 namespace StringUtils
 {
+inline std::string BytesToHexStr(u8* data, size_t length)
+{
+    std::stringstream ss;
+    ss << std::hex;
+
+    for (int i(0); i < length; ++i)
+        ss << std::setw(2) << std::setfill('0') << (int)data[i];
+
+    return ss.str();
+}
+
+inline int HexCharToInt(char input)
+{
+    if (input >= '0' && input <= '9')
+        return input - '0';
+    if (input >= 'A' && input <= 'F')
+        return input - 'A' + 10;
+    if (input >= 'a' && input <= 'f')
+        return input - 'a' + 10;
+    throw std::invalid_argument("Invalid input string");
+}
+// This function assumes src to be a zero terminated sanitized string with
+// an even number of [0-9a-f] characters, and target to be sufficiently large
+inline void HexStrToBytes(const char* src, u8* target)
+{
+    while (*src && src[1])
+    {
+        *(target++) = HexCharToInt(*src) * 16 + HexCharToInt(src[1]);
+        src += 2;
+    }
+}
+
 inline std::string GetLineFromCin()
 {
     std::string line;

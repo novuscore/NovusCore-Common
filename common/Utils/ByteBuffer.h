@@ -476,7 +476,7 @@ public:
     template <size_t size>
     static std::shared_ptr<ByteBuffer> Borrow()
     {
-        static_assert(size <= 1048576);
+        static_assert(size <= 209715200);
 
         if constexpr (size <= 128)
         {
@@ -646,6 +646,20 @@ public:
 
             return buffer;
         }
+        else if constexpr (size <= 209715200) // This is used for the Data Extractor, largest observed file in WOTLK is 65MB, however in BFA this has been observed to be 150MB
+        {
+            if (_byteBuffer209715200.empty())
+            {
+                ByteBuffer* newDataStore = new ByteBuffer(nullptr, 209715200);
+                _byteBuffer209715200.add(std::unique_ptr<ByteBuffer>(newDataStore));
+            }
+
+            std::shared_ptr<ByteBuffer> buffer = _byteBuffer209715200.acquire();
+            buffer->Size = size;
+            buffer->Reset();
+
+            return buffer;
+        }
     }
 
 private:
@@ -663,5 +677,5 @@ private:
     static SharedPool<ByteBuffer> _byteBuffer262144;
     static SharedPool<ByteBuffer> _byteBuffer524288;
     static SharedPool<ByteBuffer> _byteBuffer1048576;
-
+    static SharedPool<ByteBuffer> _byteBuffer209715200;
 };

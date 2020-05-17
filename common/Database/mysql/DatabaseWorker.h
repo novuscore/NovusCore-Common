@@ -23,14 +23,24 @@ class DatabaseWorker
 public:
     DatabaseWorker(std::shared_ptr<Mysql> connector, moodycamel::ConcurrentQueue<AsyncQueryJob>* queryQueue, moodycamel::ConcurrentQueue<AsyncExecuteJob>* executeQueue) : _asyncQueryQueue(queryQueue), _asyncExecuteQueue(executeQueue)
     {
+        _running = true;
         _connector = std::move(connector);
         _thread = std::thread(&DatabaseWorker::Run, this);
-        _thread.detach();
+
+        // TODO: We need to solve the data race before we can use .detach while testing
+        //_thread.detach();
+    }
+
+    void Close()
+    {
+        _running = false;
+        _thread.join();
+        _connector->Close();
     }
 
     void Run()
     {
-        while (true)
+        while (_running)
         {
             AsyncQueryJob queryJob;
             while (_asyncQueryQueue->try_dequeue(queryJob))
@@ -57,6 +67,7 @@ public:
     }
 
 private:
+    bool _running;
     std::thread _thread;
     std::shared_ptr<Mysql> _connector;
     moodycamel::ConcurrentQueue<AsyncQueryJob>* _asyncQueryQueue;

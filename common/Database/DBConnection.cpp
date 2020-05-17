@@ -24,7 +24,7 @@ void DBConnection::Close()
 
     for (DatabaseWorkerPair& pair : _workers)
     {
-        pair.connector->Close();
+        pair.worker->Close();
     }
 }
 
