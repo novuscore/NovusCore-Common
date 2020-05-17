@@ -60,6 +60,6 @@ if(NOT TARGET zlib)
     add_subdirectory(zlib)
 endif()
 
-if(NOT TARGET libmpq)
-    add_subdirectory(libmpq)
+if(NOT TARGET stormlib)
+    add_subdirectory(stormlib)
 endif()
