@@ -124,6 +124,18 @@ inline std::wstring StringToWString(const std::string& as)
     return ret;
 }
 #endif
+
+inline bool EndsWith(std::string const& fullString, std::string const& ending) 
+{
+    if (fullString.length() >= ending.length()) 
+    {
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    }
+    else 
+    {
+        return false;
+    }
+}
 } // namespace StringUtils
 
 constexpr u32 operator"" _h(char const* s, std::size_t count)

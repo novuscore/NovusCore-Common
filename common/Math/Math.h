@@ -53,6 +53,28 @@ inline float Floor(float x)
     return static_cast<float>(FloorToInt(x));
 }
 
+inline unsigned int RoofToInt(float x)
+{
+    int xi = (int)x;
+    return x < xi ? xi + 1 : xi;
+}
+
+inline unsigned int RoofToInt(double x)
+{
+    int xi = (int)x;
+    return x < xi ? xi + 1 : xi;
+}
+
+inline float Roof(float x)
+{
+    return static_cast<float>(RoofToInt(x));
+}
+
+inline double Roof(double x)
+{
+    return static_cast<double>(RoofToInt(x));
+}
+
 inline float Modulus(float a, float b)
 {
     return (a - b * Floor(a / b));
