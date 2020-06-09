@@ -259,6 +259,16 @@ void SRPUtils::CreateAccount(const std::string& username, const std::string& pas
     BN_CTX_free(ctx);
 }
 
+SRPUser::SRPUser() : a(BN_new()), A(BN_new()), S(BN_new()), username(""), password(""), authenticated(0)
+{
+    NGConstant* ng = SRPUtils::GetNG();
+    SRPUtils::RandomInit();
+
+    if (!ng || !a || !A || !S)
+        throw std::exception("Failed to Initialize SRPUser (if (!ng || !a || !A || !S)");
+
+    aBuffer = ByteBuffer::Borrow<256>();
+}
 SRPUser::SRPUser(const std::string& inUsername, const std::string& inPassword) : a(BN_new()), A(BN_new()), S(BN_new()), username(inUsername), password(inPassword), authenticated(0)
 {
     NGConstant* ng = SRPUtils::GetNG();

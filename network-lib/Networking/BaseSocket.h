@@ -26,15 +26,14 @@
 #include "BaseSocket.h"
 
 #include <asio.hpp>
-#include <asio/placeholders.hpp>
 #include <Utils/ByteBuffer.h>
 
-#define NETWORK_BUFFER_SIZE 4096
+#define NETWORK_BUFFER_SIZE 8192
 class BaseSocket : public std::enable_shared_from_this<BaseSocket>
 {
 public:
     using tcp = asio::ip::tcp;  
-    BaseSocket(tcp::socket* socket, std::function<void(void)> readHandler = nullptr, std::function<void(void)> disconnectHandler = nullptr) : _isClosed(false), _socket(socket), _readHandler(readHandler), _disconnectHandler(disconnectHandler) { Init(); }
+    BaseSocket(tcp::socket* socket) : _isClosed(false), _socket(socket) { Init(); }
     ~BaseSocket() { }
 
     void Init()
@@ -53,7 +52,9 @@ public:
         }
 
         _receiveBuffer->WrittenData += bytesRead;
-        _readHandler();
+
+        if (_readHandler)
+            _readHandler(this);
     }
     void _internalWrite(asio::error_code errorCode, std::size_t bytesWritten)
     {
@@ -85,21 +86,32 @@ public:
     {
         if (!_isClosed)
         {
-            _disconnectHandler();
+            if (_disconnectHandler)
+                _disconnectHandler(this);
 
             _socket->close();
             _isClosed = true;
         }
     }
+    void _internalConnected()
+    {
+        if (_connectHandler)
+            _connectHandler(this);
+    }
+
     tcp::socket* socket()
     {
         return _socket;
     }
-    void SetReadHandler(std::function<void(void)> readHandler)
+    void SetReadHandler(std::function<void(BaseSocket*)> readHandler)
     {
         _readHandler = readHandler;
     }
-    void SetDisconnectHandler(std::function<void(void)> disconnectHandler)
+    void SetConnectHandler(std::function<void(BaseSocket*)> connectHandler)
+    {
+        _connectHandler = connectHandler;
+    }
+    void SetDisconnectHandler(std::function<void(BaseSocket*)> disconnectHandler)
     {
         _disconnectHandler = disconnectHandler;
     }
@@ -109,6 +121,7 @@ private:
 
     bool _isClosed = false;
     tcp::socket* _socket;
-    std::function<void(void)> _readHandler;
-    std::function<void(void)> _disconnectHandler;
+    std::function<void(BaseSocket*)> _readHandler;
+    std::function<void(BaseSocket*)> _connectHandler;
+    std::function<void(BaseSocket*)> _disconnectHandler;
 };

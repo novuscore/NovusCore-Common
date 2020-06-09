@@ -193,6 +193,7 @@ private:
 class SRPUser
 {
 public:
+    SRPUser();
     SRPUser(const std::string& inUsername, const std::string& inPassword);
     ~SRPUser();
 
@@ -209,8 +210,8 @@ public:
     std::shared_ptr<ByteBuffer> aBuffer;
     i32 authenticated;
 
-    const std::string username;
-    const std::string password;
+    std::string username;
+    std::string password;
 
     u8 M[32] = { 0 };
     u8 HAMK[32] = { 0 };
@@ -220,7 +221,6 @@ public:
 class SRPVerifier
 {
 public:
-
     SRPVerifier();
 
     bool StartVerification(const std::string& inUsername, const u8* aBuffer);
