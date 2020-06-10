@@ -1,9 +1,10 @@
 #pragma once
 #include <NovusTypes.h>
 #include <Utils/ByteBuffer.h>
+#include "Opcode.h"
 
 struct PacketHeader
 {
-    u16 opcode = 0;
+    Opcode opcode = Opcode::INVALID;
     u16 size = 0;
 };

@@ -4,7 +4,7 @@
 
 MessageHandler::MessageHandler()
 {
-    for (i32 i = 0; i < Opcode::OPCODE_MAX_COUNT; i++)
+    for (i32 i = 0; i < static_cast<u16>(Opcode::MAX_COUNT); i++)
     {
         handlers[i] = nullptr;
     }
@@ -12,10 +12,10 @@ MessageHandler::MessageHandler()
 
 void MessageHandler::SetMessageHandler(Opcode opcode, MessageHandlerFn func)
 {
-    handlers[opcode] = func;
+    handlers[static_cast<u16>(opcode)] = func;
 }
 
 bool MessageHandler::CallHandler(std::shared_ptr<NetworkClient> connection, NetworkPacket* packet)
 {
-    return handlers[packet->header.opcode] ? handlers[packet->header.opcode](connection, packet) : true;
+    return handlers[static_cast<u16>(packet->header.opcode)] ? handlers[static_cast<u16>(packet->header.opcode)](connection, packet) : true;
 }

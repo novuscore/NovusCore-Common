@@ -1,12 +1,15 @@
 #pragma once
+#include "../../NovusTypes.h"
 
-enum Opcode
+enum class Opcode : u16
 {
+    INVALID,
     CMSG_LOGON_CHALLENGE,
     SMSG_LOGON_CHALLENGE,
     CMSG_LOGON_RESPONSE,
     SMSG_LOGON_RESPONSE,
     CMSG_CONNECTED,
+    SMSG_CREATE_PLAYER,
     SMSG_CREATE_ENTITY,
     SMSG_DELETE_ENTITY,
     SMSG_UPDATE_ENTITY,
@@ -15,5 +18,5 @@ enum Opcode
     MSG_MOVE_STOP_ENTITY,
     IMSG_HANDSHAKE,
     IMSG_HANDSHAKE_RESPONSE,
-    OPCODE_MAX_COUNT
+    MAX_COUNT
 };

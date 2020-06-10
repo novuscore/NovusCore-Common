@@ -15,5 +15,5 @@ public:
     bool CallHandler(std::shared_ptr<NetworkClient> connection, NetworkPacket* packet);
 
 private:
-    MessageHandlerFn handlers[Opcode::OPCODE_MAX_COUNT];
+    MessageHandlerFn handlers[static_cast<u16>(Opcode::MAX_COUNT)];
 };
