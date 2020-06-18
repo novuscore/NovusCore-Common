@@ -145,8 +145,8 @@ public:
     bool Connect(tcp::endpoint endpoint);
     bool Connect(std::string address, u16 port);
 
-    u32 GetIdentity() { return _identity; }
-    void SetIdentity(u32 identity) { _identity = identity; }
+    u64 GetIdentity() { return _identity; }
+    void SetIdentity(u64 identity) { _identity = identity; }
 private:
-    u32 _identity;
+    u64 _identity;
 };

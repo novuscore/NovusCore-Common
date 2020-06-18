@@ -463,8 +463,8 @@ public:
     }
     bool IsEmpty() { return WrittenData == 0; }
     bool IsFull() { return WrittenData == Size; }
-    u32 GetRemainingSpace() { return static_cast<u32>(Size - WrittenData); }
-    u32 GetActiveSize() { return static_cast<u32>(WrittenData - ReadData); }
+    inline u32 GetRemainingSpace() { return static_cast<u32>(Size - WrittenData); }
+    inline u32 GetActiveSize() { return static_cast<u32>(WrittenData - ReadData); }
 
     size_t WrittenData = 0;
     size_t ReadData = 0;
