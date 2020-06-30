@@ -15,6 +15,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     common::dependencies
     openssl::openssl
     type_safe::type_safe
+	Entt::Entt
 )
 
 add_compile_definitions(NOMINMAX _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)

@@ -212,7 +212,7 @@ NGConstant::~NGConstant()
     BN_free(g);
 }
 
-void SRPUtils::CreateAccount(const std::string& username, const std::string& password, ByteBuffer* sBuffer, ByteBuffer* vBuffer)
+void SRPUtils::CreateAccount(const std::string& username, const std::string& password, Bytebuffer* sBuffer, Bytebuffer* vBuffer)
 {
     NGConstant* ng = GetNG();
     BN_CTX* ctx = BN_CTX_new();
@@ -241,14 +241,14 @@ void SRPUtils::CreateAccount(const std::string& username, const std::string& pas
     size_t newSizeS = static_cast<size_t>(BN_num_bytes(s));
     size_t newSizeV = static_cast<size_t>(BN_num_bytes(v));
 
-    assert(sBuffer->Size >= newSizeS);
-    assert(vBuffer->Size >= newSizeV);
+    assert(sBuffer->size >= newSizeS);
+    assert(vBuffer->size >= newSizeV);
 
-    sBuffer->Size = newSizeS;
-    sBuffer->WrittenData = newSizeS;
+    sBuffer->size = newSizeS;
+    sBuffer->writtenData = newSizeS;
 
-    vBuffer->Size = newSizeV;
-    vBuffer->WrittenData = newSizeV;
+    vBuffer->size = newSizeV;
+    vBuffer->writtenData = newSizeV;
 
     BN_bn2bin(s, sBuffer->GetDataPointer());
     BN_bn2bin(v, vBuffer->GetDataPointer());
@@ -267,7 +267,7 @@ SRPUser::SRPUser() : a(BN_new()), A(BN_new()), S(BN_new()), username(""), passwo
     if (!ng || !a || !A || !S)
         throw std::exception("Failed to Initialize SRPUser (if (!ng || !a || !A || !S)");
 
-    aBuffer = ByteBuffer::Borrow<256>();
+    aBuffer = Bytebuffer::Borrow<256>();
 }
 SRPUser::SRPUser(const std::string& inUsername, const std::string& inPassword) : a(BN_new()), A(BN_new()), S(BN_new()), username(inUsername), password(inPassword), authenticated(0)
 {
@@ -277,7 +277,7 @@ SRPUser::SRPUser(const std::string& inUsername, const std::string& inPassword) :
     if (!ng || !a || !A || !S)
         throw std::exception("Failed to Initialize SRPUser (if (!ng || !a || !A || !S)");
 
-    aBuffer = ByteBuffer::Borrow<256>();
+    aBuffer = Bytebuffer::Borrow<256>();
 }
 SRPUser::~SRPUser()
 {
@@ -294,17 +294,17 @@ bool SRPUser::StartAuthentication()
     BN_CTX_free(ctx);
 
     size_t newSize = BN_num_bytes(A);
-    assert(aBuffer->Size >= newSize);
-    aBuffer->Size = newSize;
+    assert(aBuffer->size >= newSize);
+    aBuffer->size = newSize;
 
     // SRP-6a safety check
-    if (!aBuffer->Size || aBuffer->Size < newSize)
+    if (!aBuffer->size || aBuffer->size < newSize)
     {
-        assert(aBuffer->Size && aBuffer->Size >= newSize);
+        assert(aBuffer->size && aBuffer->size >= newSize);
         return false;
     }
 
-    aBuffer->WrittenData = aBuffer->Size;
+    aBuffer->writtenData = aBuffer->size;
     BN_bn2bin(A, aBuffer->GetDataPointer());
     return true;
 }
@@ -395,7 +395,7 @@ bool SRPUser::VerifySession(const u8* inHAMK)
 
 SRPVerifier::SRPVerifier() : authenticated(0), username()
 {
-    bBuffer = ByteBuffer::Borrow<256>();
+    bBuffer = Bytebuffer::Borrow<256>();
     saltBuffer = nullptr;
     verifierBuffer = nullptr;
 }
@@ -403,8 +403,8 @@ bool SRPVerifier::StartVerification(const std::string& inUsername, const u8* aBu
 {
     NGConstant* ng = SRPUtils::GetNG();
 
-    BIGNUM* s = BN_bin2bn(saltBuffer->GetDataPointer(), static_cast<i32>(saltBuffer->Size), nullptr);
-    BIGNUM* v = BN_bin2bn(verifierBuffer->GetDataPointer(), static_cast<i32>(verifierBuffer->Size), nullptr);
+    BIGNUM* s = BN_bin2bn(saltBuffer->GetDataPointer(), static_cast<i32>(saltBuffer->size), nullptr);
+    BIGNUM* v = BN_bin2bn(verifierBuffer->GetDataPointer(), static_cast<i32>(verifierBuffer->size), nullptr);
     BIGNUM* A = BN_bin2bn(aBuffer, 256, nullptr);
     BIGNUM* k = nullptr;
     BIGNUM* u = nullptr;
@@ -465,13 +465,13 @@ bool SRPVerifier::StartVerification(const std::string& inUsername, const u8* aBu
     CalculateHAMK(HAMK, A, M, session_key);
 
     size_t newSize = BN_num_bytes(B);
-    bBuffer->Size = newSize;
-    bBuffer->WrittenData = bBuffer->Size;
+    bBuffer->size = newSize;
+    bBuffer->writtenData = bBuffer->size;
 
     // SRP-6a safety check
-    if (!bBuffer->Size || bBuffer->Size < newSize)
+    if (!bBuffer->size || bBuffer->size < newSize)
     {
-        assert(bBuffer->Size && bBuffer->Size >= newSize);
+        assert(bBuffer->size && bBuffer->size >= newSize);
         return false;
     }
 

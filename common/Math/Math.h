@@ -140,6 +140,16 @@ inline int Max(int a, int b)
     return (a >= b) ? a : b;
 }
 
+inline size_t Min(size_t a, size_t b)
+{
+    return (a <= b) ? a : b;
+}
+
+inline size_t Max(size_t a, size_t b)
+{
+    return (a >= b) ? a : b;
+}
+
 inline float Clamp(float x, float min, float max)
 {
     return Max(Min(x, max), min);

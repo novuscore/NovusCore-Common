@@ -17,5 +17,8 @@ void MessageHandler::SetMessageHandler(Opcode opcode, MessageHandlerFn func)
 
 bool MessageHandler::CallHandler(std::shared_ptr<NetworkClient> connection, NetworkPacket* packet)
 {
-    return handlers[static_cast<u16>(packet->header.opcode)] ? handlers[static_cast<u16>(packet->header.opcode)](connection, packet) : true;
+    if (packet->header.opcode <= Opcode::INVALID || packet->header.opcode > Opcode::MAX_COUNT)
+        return false;
+
+    return handlers[static_cast<u16>(packet->header.opcode)] ? handlers[static_cast<u16>(packet->header.opcode)](connection, packet) : false;
 }

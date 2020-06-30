@@ -183,7 +183,7 @@ class SRPUtils
 {
 public:
     static NGConstant* GetNG(const SRP_NGType ngType = SRP_NGType::SRP_NG_2048);
-    static void CreateAccount(const std::string& username, const std::string& password, ByteBuffer* sBuffer, ByteBuffer* vBuffer);
+    static void CreateAccount(const std::string& username, const std::string& password, Bytebuffer* sBuffer, Bytebuffer* vBuffer);
     static void RandomInit();
 private:
     static NGConstant* _ng;
@@ -207,7 +207,7 @@ public:
     BIGNUM* A;
     BIGNUM* S;
 
-    std::shared_ptr<ByteBuffer> aBuffer;
+    std::shared_ptr<Bytebuffer> aBuffer;
     i32 authenticated;
 
     std::string username;
@@ -228,9 +228,9 @@ public:
     /* inM must be exactly SHA256_DIGEST_LENGTH bytes in size */
     bool VerifySession(const u8* inM);
 
-    std::shared_ptr<ByteBuffer> bBuffer;
-    std::shared_ptr<ByteBuffer> saltBuffer;
-    std::shared_ptr<ByteBuffer> verifierBuffer;
+    std::shared_ptr<Bytebuffer> bBuffer;
+    std::shared_ptr<Bytebuffer> saltBuffer;
+    std::shared_ptr<Bytebuffer> verifierBuffer;
     i32 authenticated;
 
     std::string username;

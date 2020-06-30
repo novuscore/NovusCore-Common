@@ -8,7 +8,7 @@
 struct NetworkPacket
 {
     PacketHeader header;
-    std::shared_ptr<ByteBuffer> payload = nullptr;
+    std::shared_ptr<Bytebuffer> payload = nullptr;
 
     static std::shared_ptr<NetworkPacket> Borrow()
     {

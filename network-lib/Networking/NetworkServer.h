@@ -35,9 +35,10 @@ public:
         _clients.push_back(client);
         connectMutex.unlock();
 
-        client->_internalConnected();
+        client->_internalConnected(true);
     }
 
+    u32 GetAddress() { return _acceptor.local_endpoint().address().to_v4().to_uint(); }
     u16 GetPort() { return _acceptor.local_endpoint().port(); }
     bool IsRunning() { return _isRunning; }
 

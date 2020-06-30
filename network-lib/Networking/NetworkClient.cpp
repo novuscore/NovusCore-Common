@@ -14,15 +14,20 @@ bool NetworkClient::Connect(tcp::endpoint endpoint)
     try
     {
         socket()->connect(endpoint);
-        _internalConnected();
+        _internalConnected(true);
     }
     catch (std::exception e)
     {
+        _internalConnected(false);
         return false;
     }
 
     Listen();
     return true;
+}
+bool NetworkClient::Connect(u32 address, u16 port)
+{
+    return Connect(tcp::endpoint(asio::ip::address(asio::ip::address_v4(address)), port));
 }
 bool NetworkClient::Connect(std::string address, u16 port)
 {

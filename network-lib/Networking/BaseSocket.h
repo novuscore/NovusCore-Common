@@ -38,11 +38,11 @@ public:
 
     void Init()
     {
-        _receiveBuffer = ByteBuffer::Borrow<NETWORK_BUFFER_SIZE>();
-        _sendBuffer = ByteBuffer::Borrow<NETWORK_BUFFER_SIZE>();
+        _receiveBuffer = Bytebuffer::Borrow<NETWORK_BUFFER_SIZE>();
+        _sendBuffer = Bytebuffer::Borrow<NETWORK_BUFFER_SIZE>();
     }
 
-    std::shared_ptr<ByteBuffer> GetReceiveBuffer() { return _receiveBuffer; }
+    std::shared_ptr<Bytebuffer> GetReceiveBuffer() { return _receiveBuffer; }
     void _internalRead(asio::error_code errorCode, size_t bytesRead)
     {
         if (errorCode)
@@ -51,7 +51,7 @@ public:
             return;
         }
 
-        _receiveBuffer->WrittenData += bytesRead;
+        _receiveBuffer->writtenData += bytesRead;
 
         if (_readHandler)
             _readHandler(this);
@@ -69,14 +69,14 @@ public:
             return;
 
         _receiveBuffer->Reset();
-        _socket->async_read_some(asio::buffer(_receiveBuffer->GetWritePointer(), _receiveBuffer->GetRemainingSpace()),
+        _socket->async_read_some(asio::buffer(_receiveBuffer->GetReadPointer(), _receiveBuffer->GetReadSpace()),
             std::bind(&BaseSocket::_internalRead, this, std::placeholders::_1, std::placeholders::_2));
     }
-    void Send(ByteBuffer* buffer)
+    void Send(Bytebuffer* buffer)
     {
         if (!buffer->IsEmpty() || buffer->IsFull())
         {
-            _socket->async_write_some(asio::buffer(buffer->GetDataPointer(), buffer->WrittenData),
+            _socket->async_write_some(asio::buffer(buffer->GetDataPointer(), buffer->writtenData),
                 std::bind(&BaseSocket::_internalWrite, this, std::placeholders::_1, std::placeholders::_2));
         }
     }
@@ -93,10 +93,10 @@ public:
             _isClosed = true;
         }
     }
-    void _internalConnected()
+    void _internalConnected(bool connected)
     {
         if (_connectHandler)
-            _connectHandler(this);
+            _connectHandler(this, connected);
     }
 
     tcp::socket* socket()
@@ -107,7 +107,7 @@ public:
     {
         _readHandler = readHandler;
     }
-    void SetConnectHandler(std::function<void(BaseSocket*)> connectHandler)
+    void SetConnectHandler(std::function<void(BaseSocket*, bool)> connectHandler)
     {
         _connectHandler = connectHandler;
     }
@@ -116,12 +116,12 @@ public:
         _disconnectHandler = disconnectHandler;
     }
 private:
-    std::shared_ptr<ByteBuffer> _receiveBuffer;
-    std::shared_ptr<ByteBuffer> _sendBuffer;
+    std::shared_ptr<Bytebuffer> _receiveBuffer;
+    std::shared_ptr<Bytebuffer> _sendBuffer;
 
     bool _isClosed = false;
     tcp::socket* _socket;
     std::function<void(BaseSocket*)> _readHandler;
-    std::function<void(BaseSocket*)> _connectHandler;
+    std::function<void(BaseSocket*, bool)> _connectHandler;
     std::function<void(BaseSocket*)> _disconnectHandler;
 };

@@ -24,7 +24,7 @@ public:
         return true;
     }
 
-    void Read(ByteBuffer& buffer, size_t length)
+    void Read(Bytebuffer& buffer, size_t length)
     {
         // Soft check to ensure we don't try to read from empty file
         if (_length == 0)

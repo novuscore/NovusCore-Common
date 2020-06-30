@@ -1,6 +1,7 @@
 #pragma once
 #include <Networking/BaseSocket.h>
 #include <Utils/DebugHandler.h>
+#include <entity/fwd.hpp>
 
 enum BuildType
 {
@@ -10,7 +11,7 @@ enum BuildType
     Release
 };
 
-// Align data perfectly
+// Align struct data with no padding
 #pragma pack(push, 1)
 struct ClientLogonChallenge
 {
@@ -45,9 +46,9 @@ struct ClientLogonChallenge
 
         return ret;
     }
-    u16 Serialize(std::shared_ptr<ByteBuffer> buffer, std::shared_ptr<ByteBuffer> aBuffer)
+    u16 Serialize(std::shared_ptr<Bytebuffer> buffer, std::shared_ptr<Bytebuffer> aBuffer)
     {
-        u16 size = static_cast<u16>(buffer->WrittenData);
+        u16 size = static_cast<u16>(buffer->writtenData);
 
         buffer->PutU8(majorVersion);
         buffer->PutU8(patchVersion);
@@ -56,11 +57,11 @@ struct ClientLogonChallenge
         buffer->PutU16(gameBuild);
         buffer->PutString(gameName);
         buffer->PutString(username);
-        buffer->PutBytes(aBuffer->GetDataPointer(), aBuffer->Size);
+        buffer->PutBytes(aBuffer->GetDataPointer(), aBuffer->size);
 
-        return static_cast<u16>(buffer->WrittenData) - size;
+        return static_cast<u16>(buffer->writtenData) - size;
     }
-    void Deserialize(std::shared_ptr<ByteBuffer> buffer)
+    void Deserialize(std::shared_ptr<Bytebuffer> buffer)
     {
         buffer->GetU8(majorVersion);
         buffer->GetU8(patchVersion);
@@ -78,9 +79,9 @@ struct ServerLogonChallenge
     u8 B[256];
     u8 s[4];
 
-    u16 Serialize(std::shared_ptr<ByteBuffer> buffer)
+    u16 Serialize(std::shared_ptr<Bytebuffer> buffer)
     {
-        u16 size = static_cast<u16>(buffer->WrittenData);
+        u16 size = static_cast<u16>(buffer->writtenData);
 
         buffer->PutU8(status);
         if (status == 0)
@@ -89,9 +90,9 @@ struct ServerLogonChallenge
             buffer->PutBytes(s, 4);
         }
 
-        return static_cast<u16>(buffer->WrittenData) - size;
+        return static_cast<u16>(buffer->writtenData) - size;
     }
-    void Deserialize(std::shared_ptr<ByteBuffer> buffer)
+    void Deserialize(std::shared_ptr<Bytebuffer> buffer)
     {
         buffer->GetU8(status);
         if (status == 0)
@@ -101,52 +102,67 @@ struct ServerLogonChallenge
         }
     }
 };
-struct ClientLogonResponse
+struct ClientLogonHandshake
 {
     u8 M1[32];
 
-    void Deserialize(std::shared_ptr<ByteBuffer> buffer)
+    void Deserialize(std::shared_ptr<Bytebuffer> buffer)
     {
         buffer->GetBytes(M1, sizeof(M1));
     }
-    u16 Serialize(std::shared_ptr<ByteBuffer> buffer)
+    u16 Serialize(std::shared_ptr<Bytebuffer> buffer)
     {
-        u16 size = static_cast<u16>(buffer->WrittenData);
+        u16 size = static_cast<u16>(buffer->writtenData);
         buffer->PutBytes(M1, sizeof(M1));
 
-        return static_cast<u16>(buffer->WrittenData) - size;
+        return static_cast<u16>(buffer->writtenData) - size;
     }
 };
-struct ServerLogonResponse
+struct ServerLogonHandshake
 {
     u8 HAMK[32];
 
-    u16 Serialize(std::shared_ptr<ByteBuffer> buffer)
+    u16 Serialize(std::shared_ptr<Bytebuffer> buffer)
     {
-        u16 size = static_cast<u16>(buffer->WrittenData);
+        u16 size = static_cast<u16>(buffer->writtenData);
         buffer->PutBytes(HAMK, sizeof(HAMK));
         
-        return static_cast<u16>(buffer->WrittenData) - size;
+        return static_cast<u16>(buffer->writtenData) - size;
     }
-    void Deserialize(std::shared_ptr<ByteBuffer> buffer)
+    void Deserialize(std::shared_ptr<Bytebuffer> buffer)
     {
         buffer->GetBytes(HAMK, sizeof(HAMK));
     }
 };
 #pragma pack(pop)
 
+enum class ConnectionStatus
+{
+    AUTH_NONE,
+    AUTH_CHALLENGE,
+    AUTH_HANDSHAKE,
+    AUTH_FAILED,
+    AUTH_SUCCESS,
+    CONNECTED,
+};
 class NetworkClient : public BaseSocket
 {
 public:
     using tcp = asio::ip::tcp;
-    NetworkClient(tcp::socket* socket, u32 identity = 0) : BaseSocket(socket), _identity(identity) { }
+    NetworkClient(tcp::socket* socket, u32 identity = 0) : BaseSocket(socket), _status(ConnectionStatus::AUTH_NONE), _identity(identity) { }
 
     void Listen();
     bool Connect(tcp::endpoint endpoint);
+    bool Connect(u32 address, u16 port);
     bool Connect(std::string address, u16 port);
 
-    u64 GetIdentity() { return _identity; }
-    void SetIdentity(u64 identity) { _identity = identity; }
+    ConnectionStatus GetStatus() { return _status; }
+    void SetStatus(ConnectionStatus status) { _status = status; }
+
+    u64 GetEntityId() { return _identity; }
+    entt::entity GetEntity() { return static_cast<entt::entity>(_identity); }
+    void SetEntityId(u64 identity) { _identity = identity; }
 private:
+    ConnectionStatus _status;
     u64 _identity;
 };

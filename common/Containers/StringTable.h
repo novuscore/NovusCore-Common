@@ -23,7 +23,7 @@
 #include <robin_hood.h>
 #include <shared_mutex>
 
-class ByteBuffer;
+class Bytebuffer;
 
 class StringTable
 {
@@ -36,8 +36,8 @@ public:
 
     size_t GetNumStrings() { return _strings.size(); }
 
-    void Serialize(ByteBuffer& byteBuffer);
-    void Deserialize(ByteBuffer& byteBuffer);
+    void Serialize(Bytebuffer& bytebuffer);
+    void Deserialize(Bytebuffer& bytebuffer);
 
     void CopyFrom(StringTable& other);
 

@@ -186,7 +186,7 @@ public:
 
         return std::string(_data);
     }
-    std::shared_ptr<ByteBuffer> GetBinary() const
+    std::shared_ptr<Bytebuffer> GetBinary() const
     {
         if (IsNull())
         {
@@ -203,9 +203,9 @@ public:
             SQL values, as I don't see us storing bigger values, feel
             free to up this value if problems occur in the future
         */
-        std::shared_ptr<ByteBuffer> buffer = ByteBuffer::Borrow<8192>();
-        buffer->Size = _field->length;
-        memcpy(buffer->GetDataPointer(), _data, buffer->Size);
+        std::shared_ptr<Bytebuffer> buffer = Bytebuffer::Borrow<8192>();
+        buffer->size = _field->length;
+        memcpy(buffer->GetDataPointer(), _data, buffer->size);
 
         return buffer;
     }

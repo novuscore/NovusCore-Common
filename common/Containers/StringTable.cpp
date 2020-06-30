@@ -1,6 +1,6 @@
 #include "StringTable.h"
 #include "../Utils/StringUtils.h"
-#include "../Utils/ByteBuffer.h"
+#include "../Utils/Bytebuffer.h"
 
 u32 StringTable::AddString(const std::string& string)
 {
@@ -43,7 +43,7 @@ u32 StringTable::GetStringHash(u32 index)
     return _hashes[index];
 }
 
-void StringTable::Serialize(ByteBuffer& byteBuffer)
+void StringTable::Serialize(Bytebuffer& bytebuffer)
 {
     // First we need to calculate the total size of our strings
     u32 totalSize = 0;
@@ -54,20 +54,20 @@ void StringTable::Serialize(ByteBuffer& byteBuffer)
     }
 
     // Then we push this value into the byteBuffer
-    byteBuffer.Put<u32>(totalSize);
+    bytebuffer.Put<u32>(totalSize);
 
     // Then we go ahead and put each string
     for (auto& string : _strings)
     {
-        byteBuffer.PutBytes((u8*)(string.c_str()), string.size()+1);
+        bytebuffer.PutBytes((u8*)(string.c_str()), string.size()+1);
     }
 }
 
-void StringTable::Deserialize(ByteBuffer& byteBuffer)
+void StringTable::Deserialize(Bytebuffer& bytebuffer)
 {
     // First we read the total size of strings to read
     u32 totalSize;
-    if (!byteBuffer.GetU32(totalSize))
+    if (!bytebuffer.GetU32(totalSize))
     {
         assert(false);
     }
@@ -78,7 +78,7 @@ void StringTable::Deserialize(ByteBuffer& byteBuffer)
     u32 readSize = 0;
     while(readSize < totalSize)
     {
-        byteBuffer.GetString(string);
+        bytebuffer.GetString(string);
 
         u32 hashedString = StringUtils::fnv1a_32(string.c_str(), string.size());
         _strings.push_back(string);
