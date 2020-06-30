@@ -2,27 +2,29 @@
 #define ENTT_ENTITY_REGISTRY_HPP
 
 
-#include <tuple>
-#include <vector>
-#include <memory>
-#include <utility>
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
-#include <algorithm>
+#include <memory>
+#include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 #include "../config/config.h"
 #include "../core/algorithm.hpp"
+#include "../core/fwd.hpp"
 #include "../core/type_info.hpp"
 #include "../core/type_traits.hpp"
 #include "../signal/sigh.hpp"
-#include "runtime_view.hpp"
-#include "sparse_set.hpp"
-#include "snapshot.hpp"
-#include "storage.hpp"
 #include "entity.hpp"
-#include "group.hpp"
-#include "view.hpp"
 #include "fwd.hpp"
+#include "group.hpp"
+#include "runtime_view.hpp"
+#include "snapshot.hpp"
+#include "sparse_set.hpp"
+#include "storage.hpp"
+#include "utility.hpp"
+#include "view.hpp"
 
 
 namespace entt {
@@ -33,8 +35,8 @@ namespace entt {
  *
  * The registry is the core class of the entity-component framework.<br/>
  * It stores entities and arranges pools of components on a per request basis.
- * By means of a registry, users can manage entities and components and thus
- * create views or groups to iterate them.
+ * By means of a registry, users can manage entities and components, then create
+ * views or groups to iterate them.
  *
  * @tparam Entity A valid entity type (see entt_traits for more details).
  */
@@ -43,7 +45,7 @@ class basic_registry {
     using traits_type = entt_traits<std::underlying_type_t<Entity>>;
 
     template<typename Component>
-    struct pool_handler: storage<Entity, Component> {
+    struct pool_handler final: storage<Entity, Component> {
         static_assert(std::is_same_v<Component, std::decay_t<Component>>);
         std::size_t super{};
 
@@ -51,7 +53,7 @@ class basic_registry {
             return sink{construction};
         }
 
-        auto on_replace() ENTT_NOEXCEPT {
+        auto on_update() ENTT_NOEXCEPT {
             return sink{update};
         }
 
@@ -60,45 +62,58 @@ class basic_registry {
         }
 
         template<typename... Args>
-        decltype(auto) assign(basic_registry &owner, const Entity entt, Args &&... args) {
-            this->construct(entt, std::forward<Args>(args)...);
+        decltype(auto) emplace(basic_registry &owner, const Entity entt, Args &&... args) {
+            storage<entity_type, Component>::emplace(entt, std::forward<Args>(args)...);
             construction.publish(owner, entt);
-            return this->get(entt);
+
+            if constexpr(!ENTT_IS_EMPTY(Component)) {
+                return this->get(entt);
+            }
         }
 
-        template<typename It, typename... Value>
-        std::enable_if_t<std::is_same_v<typename std::iterator_traits<It>::value_type, Entity>, void>
-        assign(basic_registry &owner, It first, It last, Value &&... value) {
-            this->construct(first, last, std::forward<Value>(value)...);
+        template<typename It, typename... Args>
+        void insert(basic_registry &owner, It first, It last, Args &&... args) {
+            storage<entity_type, Component>::insert(first, last, std::forward<Args>(args)...);
 
             if(!construction.empty()) {
-                std::for_each(first, last, [this, &owner](const auto entt) { construction.publish(owner, entt); });
+                while(first != last) { construction.publish(owner, *(first++)); }
             }
         }
 
         void remove(basic_registry &owner, const Entity entt) {
             destruction.publish(owner, entt);
-            this->destroy(entt);
+            this->erase(entt);
         }
 
         template<typename It>
         void remove(basic_registry &owner, It first, It last) {
             if(std::distance(first, last) == std::distance(this->begin(), this->end())) {
                 if(!destruction.empty()) {
-                    std::for_each(first, last, [this, &owner](const auto entt) { destruction.publish(owner, entt); });
+                    while(first != last) { destruction.publish(owner, *(first++)); }
                 }
 
                 this->clear();
             } else {
-                // useless this-> used to suppress a warning with clang
-                std::for_each(first, last, [this, &owner](const auto entt) { this->remove(owner, entt); });
+                while(first != last) { this->remove(owner, *(first++)); }
             }
         }
 
         template<typename... Func>
-        void replace(basic_registry &owner, const Entity entt, Func &&... func) {
+        decltype(auto) patch(basic_registry &owner, const Entity entt, Func &&... func) {
             (std::forward<Func>(func)(this->get(entt)), ...);
             update.publish(owner, entt);
+
+            if constexpr(!ENTT_IS_EMPTY(Component)) {
+                return this->get(entt);
+            }
+        }
+
+        decltype(auto) replace(basic_registry &owner, const Entity entt, [[maybe_unused]] Component component) {
+            if constexpr(ENTT_IS_EMPTY(Component)) {
+                return patch(owner, entt);
+            } else {
+                return patch(owner, entt, [&component](auto &&curr) { curr = std::move(component); });
+            }
         }
 
     private:
@@ -108,11 +123,9 @@ class basic_registry {
     };
 
     struct pool_data {
-        ENTT_ID_TYPE type_id{};
+        id_type type_id{};
         std::unique_ptr<sparse_set<Entity>> pool{};
-        void(* assure)(basic_registry &, const sparse_set<Entity> &){};
         void(* remove)(sparse_set<Entity> &, basic_registry &, const Entity){};
-        void(* stamp)(basic_registry &, const Entity, const sparse_set<Entity> &, const Entity){};
     };
 
     template<typename...>
@@ -128,13 +141,13 @@ class basic_registry {
             static_assert(std::disjunction_v<std::is_same<Owned, std::decay_t<Owned>>..., std::is_same<Get, std::decay_t<Get>>..., std::is_same<Exclude, std::decay_t<Exclude>>...>);
             [[maybe_unused]] const auto cpools = std::forward_as_tuple(owner.assure<Owned>()...);
 
-            const auto is_valid = ((std::is_same_v<Component, Owned> || std::get<pool_handler<Owned> &>(cpools).has(entt)) && ...)
-                    && ((std::is_same_v<Component, Get> || owner.assure<Get>().has(entt)) && ...)
-                    && ((std::is_same_v<Component, Exclude> || !owner.assure<Exclude>().has(entt)) && ...);
+            const auto is_valid = ((std::is_same_v<Component, Owned> || std::get<pool_handler<Owned> &>(cpools).contains(entt)) && ...)
+                    && ((std::is_same_v<Component, Get> || owner.assure<Get>().contains(entt)) && ...)
+                    && ((std::is_same_v<Component, Exclude> || !owner.assure<Exclude>().contains(entt)) && ...);
 
             if constexpr(sizeof...(Owned) == 0) {
-                if(is_valid && !current.has(entt)) {
-                    current.construct(entt);
+                if(is_valid && !current.contains(entt)) {
+                    current.emplace(entt);
                 }
             } else {
                 if(is_valid && !(std::get<0>(cpools).index(entt) < current)) {
@@ -146,11 +159,11 @@ class basic_registry {
 
         void discard_if([[maybe_unused]] basic_registry &owner, const Entity entt) {
             if constexpr(sizeof...(Owned) == 0) {
-                if(current.has(entt)) {
-                    current.destroy(entt);
+                if(current.contains(entt)) {
+                    current.erase(entt);
                 }
             } else {
-                if(const auto cpools = std::forward_as_tuple(owner.assure<Owned>()...); std::get<0>(cpools).has(entt) && (std::get<0>(cpools).index(entt) < current)) {
+                if(const auto cpools = std::forward_as_tuple(owner.assure<Owned>()...); std::get<0>(cpools).contains(entt) && (std::get<0>(cpools).index(entt) < current)) {
                     const auto pos = --current;
                     (std::get<pool_handler<Owned> &>(cpools).swap(std::get<pool_handler<Owned> &>(cpools).data()[pos], entt), ...);
                 }
@@ -161,65 +174,53 @@ class basic_registry {
     struct group_data {
         std::size_t size;
         std::unique_ptr<void, void(*)(void *)> group;
-        bool (* owned)(const ENTT_ID_TYPE) ENTT_NOEXCEPT;
-        bool (* get)(const ENTT_ID_TYPE) ENTT_NOEXCEPT;
-        bool (* exclude)(const ENTT_ID_TYPE) ENTT_NOEXCEPT;
+        bool (* owned)(const id_type) ENTT_NOEXCEPT;
+        bool (* get)(const id_type) ENTT_NOEXCEPT;
+        bool (* exclude)(const id_type) ENTT_NOEXCEPT;
     };
 
-    struct basic_variable {
-        virtual ~basic_variable() = default;
-        virtual ENTT_ID_TYPE type_id() const ENTT_NOEXCEPT = 0;
-    };
-
-    template<typename Type>
-    struct variable_handler: basic_variable {
-        static_assert(std::is_same_v<Type, std::decay_t<Type>>);
-        Type value;
-
-        template<typename... Args>
-        variable_handler(Args &&... args)
-            : value{std::forward<Args>(args)...}
-        {}
-
-        ENTT_ID_TYPE type_id() const ENTT_NOEXCEPT override {
-            return type_info<Type>::id();
-        }
+    struct variable_data {
+        id_type type_id;
+        std::unique_ptr<void, void(*)(void *)> value;
     };
 
     template<typename Component>
     const pool_handler<Component> & assure() const {
-        static std::size_t index{pools.size()};
+        static_assert(std::is_same_v<Component, std::decay_t<Component>>);
 
-        if(const auto length = pools.size(); !(index < length) || pools[index].type_id != type_info<Component>::id()) {
-            for(index = {}; index < length && pools[index].type_id != type_info<Component>::id(); ++index);
+        if constexpr(has_type_index_v<Component>) {
+            const auto index = type_index<Component>::value();
 
-            if(index == pools.size()) {
-                auto &&pdata = pools.emplace_back();
+            if(!(index < pools.size())) {
+                pools.resize(index+1);
+            }
 
+            if(auto &&pdata = pools[index]; !pdata.pool) {
                 pdata.type_id = type_info<Component>::id();
                 pdata.pool.reset(new pool_handler<Component>());
-
                 pdata.remove = [](sparse_set<entity_type> &cpool, basic_registry &owner, const entity_type entt) {
                     static_cast<pool_handler<Component> &>(cpool).remove(owner, entt);
                 };
-
-                if constexpr(std::is_copy_constructible_v<std::decay_t<Component>>) {
-                    pdata.assure = [](basic_registry &other, const sparse_set<entity_type> &cpool) {
-                        if constexpr(ENTT_ENABLE_ETO(Component)) {
-                            other.assure<Component>().assign(other, cpool.begin(), cpool.end());
-                        } else {
-                            other.assure<Component>().assign(other, cpool.begin(), cpool.end(), static_cast<const pool_handler<Component> &>(cpool).cbegin());
-                        }
-                    };
-
-                    pdata.stamp = [](basic_registry &other, const entity_type dst, const sparse_set<entity_type> &cpool, const entity_type src) {
-                        other.assign_or_replace<Component>(dst, static_cast<const pool_handler<Component> &>(cpool).get(src));
-                    };
-                }
             }
-        }
 
-        return static_cast<pool_handler<Component> &>(*pools[index].pool);
+            return static_cast<pool_handler<Component> &>(*pools[index].pool);
+        } else {
+            sparse_set<entity_type> *candidate{nullptr};
+
+            if(auto it = std::find_if(pools.begin(), pools.end(), [id = type_info<Component>::id()](const auto &pdata) { return id == pdata.type_id; }); it == pools.cend()) {
+                candidate = pools.emplace_back(pool_data{
+                    type_info<Component>::id(),
+                    std::unique_ptr<sparse_set<entity_type>>{new pool_handler<Component>()},
+                    [](sparse_set<entity_type> &cpool, basic_registry &owner, const entity_type entt) {
+                        static_cast<pool_handler<Component> &>(cpool).remove(owner, entt);
+                    }
+                }).pool.get();
+            } else {
+                candidate = it->pool.get();
+            }
+
+            return static_cast<pool_handler<Component> &>(*candidate);
+        }
     }
 
     template<typename Component>
@@ -250,7 +251,6 @@ public:
      */
     template<typename Component>
     void prepare() {
-        ENTT_ASSERT(std::none_of(pools.cbegin(), pools.cend(), [](auto &&pdata) { return pdata.type_id == type_info<Component>::id(); }));
         assure<Component>();
     }
 
@@ -545,41 +545,65 @@ public:
     }
 
     /**
-     * @brief Destroys an entity and lets the registry recycle the identifier.
+     * @brief Assigns entities to an empty registry.
+     *
+     * This function is intended for use in conjunction with `raw`.<br/>
+     * Don't try to inject ranges of randomly generated entities. There is no
+     * guarantee that a registry will continue to work properly in this case.
+     *
+     * @warning
+     * An assertion will abort the execution at runtime in debug mode if all
+     * pools aren't empty.
+     *
+     * @tparam It Type of input iterator.
+     * @param first An iterator to the first element of the range of entities.
+     * @param last An iterator past the last element of the range of entities.
+     */
+    template<typename It>
+    void assign(It first, It last) {
+        ENTT_ASSERT(std::all_of(pools.cbegin(), pools.cend(), [](auto &&pdata) { return !pdata.pool || pdata.pool->empty(); }));
+        entities.assign(first, last);
+        destroyed = null;
+
+        for(std::size_t pos{}, end = entities.size(); pos < end; ++pos) {
+            if((to_integral(entities[pos]) & traits_type::entity_mask) != pos) {
+                const auto version = to_integral(entities[pos]) & (traits_type::version_mask << traits_type::entity_shift);
+                entities[pos] = entity_type{to_integral(destroyed) | version};
+                destroyed = entity_type(pos);
+            }
+        }
+    }
+
+    /**
+     * @brief Destroys an entity.
      *
      * When an entity is destroyed, its version is updated and the identifier
      * can be recycled at any time.
      *
-     * @warning
-     * In case there are listeners that observe the destruction of components
-     * and assign other components to the entity in their bodies, the result of
-     * invoking this function may not be as expected. In the worst case, it
-     * could lead to undefined behavior. An assertion will abort the execution
-     * at runtime in debug mode if a violation is detected.
-     *
-     * @warning
-     * Attempting to use an invalid entity results in undefined behavior.<br/>
-     * An assertion will abort the execution at runtime in debug mode in case of
-     * invalid entity.
+     * @sa remove_all
      *
      * @param entity A valid entity identifier.
      */
     void destroy(const entity_type entity) {
-        ENTT_ASSERT(valid(entity));
+        destroy(entity, (to_integral(entity) >> traits_type::entity_shift) + 1);
+    }
 
-        for(auto pos = pools.size(); pos; --pos) {
-            if(auto &pdata = pools[pos-1]; pdata.pool->has(entity)) {
-                pdata.remove(*pdata.pool, *this, entity);
-            }
-        }
-
-        // just a way to protect users from listeners that attach components
-        ENTT_ASSERT(orphan(entity));
-
+    /**
+     * @brief Destroys an entity.
+     *
+     * If the entity isn't already destroyed, the suggested version is used
+     * instead of the implicitly generated one.
+     *
+     * @sa remove_all
+     *
+     * @param entity A valid entity identifier.
+     * @param version A desired version upon destruction.
+     */
+    void destroy(const entity_type entity, const version_type version) {
+        remove_all(entity);
         // lengthens the implicit list of destroyed entities
         const auto entt = to_integral(entity) & traits_type::entity_mask;
-        const auto version = ((to_integral(entity) >> traits_type::entity_shift) + 1) << traits_type::entity_shift;
-        entities[entt] = entity_type{to_integral(destroyed) | version};
+        entities[entt] = entity_type{to_integral(destroyed) | (version << traits_type::entity_shift)};
         destroyed = entity_type{entt};
     }
 
@@ -594,8 +618,7 @@ public:
      */
     template<typename It>
     void destroy(It first, It last) {
-        // useless this-> used to suppress a warning with clang
-        std::for_each(first, last, [this](const auto entity) { this->destroy(entity); });
+        while(first != last) { destroy(*(first++)); }
     }
 
     /**
@@ -619,15 +642,22 @@ public:
      * @return A reference to the newly created component.
      */
     template<typename Component, typename... Args>
-    decltype(auto) assign(const entity_type entity, Args &&... args) {
+    decltype(auto) emplace(const entity_type entity, Args &&... args) {
         ENTT_ASSERT(valid(entity));
-        return assure<Component>().assign(*this, entity, std::forward<Args>(args)...);
+        return assure<Component>().emplace(*this, entity, std::forward<Args>(args)...);
+    }
+
+    /*! @copydoc emplace */
+    template<typename Component, typename... Args>
+    [[deprecated("use ::emplace instead")]]
+    decltype(auto) assign(const entity_type entity, Args &&... args) {
+        return emplace<Component>(entity, std::forward<Args>(args)...);
     }
 
     /**
      * @brief Assigns each entity in a range the given component.
      *
-     * @sa assign
+     * @sa emplace
      *
      * @tparam Component Type of component to create.
      * @tparam It Type of input iterator.
@@ -636,55 +666,45 @@ public:
      * @param value An instance of the component to assign.
      */
     template<typename Component, typename It>
+    void insert(It first, It last, const Component &value = {}) {
+        ENTT_ASSERT(std::all_of(first, last, [this](const auto entity) { return valid(entity); }));
+        assure<Component>().insert(*this, first, last, value);
+    }
+
+    /*! @copydoc insert */
+    template<typename Component, typename It>
+    [[deprecated("use ::insert instead")]]
     std::enable_if_t<std::is_same_v<typename std::iterator_traits<It>::value_type, entity_type>, void>
     assign(It first, It last, const Component &value = {}) {
-        ENTT_ASSERT(std::all_of(first, last, [this](const auto entity) { return valid(entity); }));
-        assure<Component>().assign(*this, first, last, value);
+        return insert(std::move(first), std::move(last), value);
     }
 
     /**
      * @brief Assigns each entity in a range the given components.
      *
-     * @sa assign
+     * @sa emplace
      *
      * @tparam Component Type of component to create.
      * @tparam EIt Type of input iterator.
      * @tparam CIt Type of input iterator.
      * @param first An iterator to the first element of the range of entities.
      * @param last An iterator past the last element of the range of entities.
-     * @param value An iterator to the first element of the range of components.
+     * @param from An iterator to the first element of the range of components.
+     * @param to An iterator past the last element of the range of components.
      */
     template<typename Component, typename EIt, typename CIt>
-    std::enable_if_t<std::is_same_v<typename std::iterator_traits<EIt>::value_type, entity_type>, void>
-    assign(EIt first, EIt last, CIt value) {
+    void insert(EIt first, EIt last, CIt from, CIt to) {
+        static_assert(std::is_constructible_v<Component, typename std::iterator_traits<CIt>::value_type>);
         ENTT_ASSERT(std::all_of(first, last, [this](const auto entity) { return valid(entity); }));
-        assure<Component>().assign(*this, first, last, value);
+        assure<Component>().insert(*this, first, last, from, to);
     }
 
-    /**
-     * @brief Assigns entities to an empty registry.
-     *
-     * @warning
-     * An assertion will abort the execution at runtime in debug mode if all
-     * pools aren't empty. Groups and context variables are ignored.
-     *
-     * @tparam It Type of input iterator.
-     * @param first An iterator to the first element of the range of entities.
-     * @param last An iterator past the last element of the range of entities.
-     */
-    template<typename It>
-    void assign(It first, It last) {
-        ENTT_ASSERT(std::all_of(pools.cbegin(), pools.cend(), [](auto &&cpool) { return cpool.pool->empty(); }));
-        entities.assign(first, last);
-        destroyed = null;
-
-        for(std::size_t pos{}, end = entities.size(); pos < end; ++pos) {
-            if((to_integral(entities[pos]) & traits_type::entity_mask) != pos) {
-                const auto version = to_integral(entities[pos]) & (traits_type::version_mask << traits_type::entity_shift);
-                entities[pos] = entity_type{to_integral(destroyed) | version};
-                destroyed = entity_type(pos);
-            }
-        }
+    /*! @copydoc insert */
+    template<typename Component, typename EIt, typename CIt>
+    [[deprecated("use ::insert instead")]]
+    std::enable_if_t<std::is_same_v<typename std::iterator_traits<EIt>::value_type, entity_type>, void>
+    assign(EIt first, EIt last, CIt value) {
+        return insert<Component>(std::move(first), std::move(last), value, value + std::distance(first, last));
     }
 
     /**
@@ -693,7 +713,7 @@ public:
      * Equivalent to the following snippet (pseudocode):
      *
      * @code{.cpp}
-     * auto &component = registry.has<Component>(entity) ? registry.replace<Component>(entity, args...) : registry.assign<Component>(entity, args...);
+     * auto &component = registry.has<Component>(entity) ? registry.replace<Component>(entity, args...) : registry.emplace<Component>(entity, args...);
      * @endcode
      *
      * Prefer this function anyway because it has slightly better performance.
@@ -710,17 +730,24 @@ public:
      * @return A reference to the newly created component.
      */
     template<typename Component, typename... Args>
-    decltype(auto) assign_or_replace(const entity_type entity, Args &&... args) {
+    decltype(auto) emplace_or_replace(const entity_type entity, Args &&... args) {
         ENTT_ASSERT(valid(entity));
         auto &cpool = assure<Component>();
 
-        return cpool.has(entity)
-                ? (cpool.replace(*this, entity, [&args...](auto &&component) { component = Component{std::forward<Args>(args)...}; }), cpool.get(entity))
-                : cpool.assign(*this, entity, std::forward<Args>(args)...);
+        return cpool.contains(entity)
+                ? cpool.replace(*this, entity, Component{std::forward<Args>(args)...})
+                : cpool.emplace(*this, entity, std::forward<Args>(args)...);
+    }
+
+    /*! @copydoc emplace_or_replace */
+    template<typename Component, typename... Args>
+    [[deprecated("use ::emplace_or_replace instead")]]
+    decltype(auto) assign_or_replace(const entity_type entity, Args &&... args) {
+        return emplace_or_replace<Component>(entity, std::forward<Args>(args)...);
     }
 
     /**
-     * @brief Replaces the given component for an entity.
+     * @brief Patches the given component for an entity.
      *
      * The signature of the functions should be equivalent to the following:
      *
@@ -728,23 +755,40 @@ public:
      * void(Component &);
      * @endcode
      *
-     * Temporary objects are returned for empty types though. Capture them by
-     * copy or by const reference if needed.
+     * @note
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned. However, this function can be used to trigger an update signal
+     * for them.
      *
-     * @tparam Component Type of component to replace.
+     * @warning
+     * Attempting to use an invalid entity or to patch a component of an entity
+     * that doesn't own it results in undefined behavior.<br/>
+     * An assertion will abort the execution at runtime in debug mode in case of
+     * invalid entity or if the entity doesn't own an instance of the given
+     * component.
+     *
+     * @tparam Component Type of component to patch.
      * @tparam Func Types of the function objects to invoke.
      * @param entity A valid entity identifier.
      * @param func Valid function objects.
+     * @return A reference to the patched component.
      */
     template<typename Component, typename... Func>
-    auto replace(const entity_type entity, Func &&... func)
-    -> decltype(std::enable_if_t<sizeof...(Func) != 0>(), (func(std::declval<Component &>()), ...), void()) {
+    decltype(auto) patch(const entity_type entity, Func &&... func) {
         ENTT_ASSERT(valid(entity));
-        assure<Component>().replace(*this, entity, std::forward<Func>(func)...);
+        return assure<Component>().patch(*this, entity, std::forward<Func>(func)...);
+    }
+
+    /*! @copydoc patch */
+    template<typename Component, typename... Func>
+    [[deprecated("use registry::patch instead")]]
+    auto replace(const entity_type entity, Func &&... func)
+    -> decltype((func(std::declval<Component &>()), ...), assign<Component>(entity)) {
+        return patch<Component>(entity, std::forward<Func>(func)...);
     }
 
     /**
-     * @copybrief replace
+     * @brief Replaces the given component for an entity.
      *
      * A new instance of the given component is created and initialized with the
      * arguments provided (the component must have a proper constructor or be of
@@ -764,14 +808,9 @@ public:
      * @return A reference to the component being replaced.
      */
     template<typename Component, typename... Args>
-    [[deprecated("use in-place replace instead")]]
     auto replace(const entity_type entity, Args &&... args)
-    -> decltype(Component{std::forward<Args>(args)...}, assure<Component>().get(entity)) {
-        replace<Component>(entity, [args = std::forward_as_tuple(std::forward<Args>(args)...)](auto &&component) {
-            component = std::make_from_tuple<Component>(std::move(args));
-        });
-
-        return assure<Component>().get(entity);
+    -> decltype(std::enable_if_t<sizeof...(Args) != 0>(), Component{std::forward<Args>(args)...}, assure<Component>().get(entity)) {
+        return assure<Component>().replace(*this, entity, Component{std::forward<Args>(args)...});
     }
 
     /**
@@ -831,7 +870,39 @@ public:
     template<typename... Component>
     void remove_if_exists(const entity_type entity) {
         ENTT_ASSERT(valid(entity));
-        ([this, entity](auto &&cpool) { if(cpool.has(entity)) { cpool.remove(*this, entity); } }(assure<Component>()), ...);
+
+        ([this, entity](auto &&cpool) {
+            if(cpool.contains(entity)) {
+                cpool.remove(*this, entity);
+            }
+        }(assure<Component>()), ...);
+    }
+
+    /**
+     * @brief Removes all the components from an entity and makes it orphaned.
+     *
+     * @warning
+     * In case there are listeners that observe the destruction of components
+     * and assign other components to the entity in their bodies, the result of
+     * invoking this function may not be as expected. In the worst case, it
+     * could lead to undefined behavior. An assertion will abort the execution
+     * at runtime in debug mode if a violation is detected.
+     *
+     * @warning
+     * Attempting to use an invalid entity results in undefined behavior.<br/>
+     * An assertion will abort the execution at runtime in debug mode in case of
+     * invalid entity.
+     *
+     * @param entity A valid entity identifier.
+     */
+    void remove_all(const entity_type entity) {
+        ENTT_ASSERT(valid(entity));
+
+        for(auto pos = pools.size(); pos; --pos) {
+            if(auto &pdata = pools[pos-1]; pdata.pool && pdata.pool->contains(entity)) {
+                pdata.remove(*pdata.pool, *this, entity);
+            }
+        }
     }
 
     /**
@@ -849,7 +920,7 @@ public:
     template<typename... Component>
     bool has(const entity_type entity) const {
         ENTT_ASSERT(valid(entity));
-        return (assure<Component>().has(entity) && ...);
+        return (assure<Component>().contains(entity) && ...);
     }
 
     /**
@@ -868,7 +939,7 @@ public:
     template<typename... Component>
     bool any(const entity_type entity) const {
         ENTT_ASSERT(valid(entity));
-        return (assure<Component>().has(entity) || ...);
+        return (assure<Component>().contains(entity) || ...);
     }
 
     /**
@@ -916,7 +987,7 @@ public:
      * Equivalent to the following snippet (pseudocode):
      *
      * @code{.cpp}
-     * auto &component = registry.has<Component>(entity) ? registry.get<Component>(entity) : registry.assign<Component>(entity, args...);
+     * auto &component = registry.has<Component>(entity) ? registry.get<Component>(entity) : registry.emplace<Component>(entity, args...);
      * @endcode
      *
      * Prefer this function anyway because it has slightly better performance.
@@ -933,10 +1004,17 @@ public:
      * @return Reference to the component owned by the entity.
      */
     template<typename Component, typename... Args>
-    decltype(auto) get_or_assign(const entity_type entity, Args &&... args) {
+    decltype(auto) get_or_emplace(const entity_type entity, Args &&... args) {
         ENTT_ASSERT(valid(entity));
         auto &cpool = assure<Component>();
-        return cpool.has(entity) ? cpool.get(entity) : cpool.assign(*this, entity, std::forward<Args>(args)...);
+        return cpool.contains(entity) ? cpool.get(entity) : cpool.emplace(*this, entity, std::forward<Args>(args)...);
+    }
+
+    /*! @copydoc get_or_emplace */
+    template<typename Component, typename... Args>
+    [[deprecated("use ::get_or_emplace instead")]]
+    decltype(auto) get_or_assign(const entity_type entity, Args &&... args) {
+        return get_or_emplace<Component>(entity, std::forward<Args>(args)...);
     }
 
     /**
@@ -984,7 +1062,9 @@ public:
             // useless this-> used to suppress a warning with clang
             each([this](const auto entity) { this->destroy(entity); });
         } else {
-            ([this](auto &&cpool) { cpool.remove(*this, cpool.sparse_set<entity_type>::begin(), cpool.sparse_set<entity_type>::end()); }(assure<Component>()), ...);
+            ([this](auto &&cpool) {
+                cpool.remove(*this, cpool.sparse_set<entity_type>::begin(), cpool.sparse_set<entity_type>::end());
+            }(assure<Component>()), ...);
         }
     }
 
@@ -1029,7 +1109,7 @@ public:
      */
     bool orphan(const entity_type entity) const {
         ENTT_ASSERT(valid(entity));
-        return std::none_of(pools.cbegin(), pools.cend(), [entity](auto &&pdata) { return pdata.pool->has(entity); });
+        return std::none_of(pools.cbegin(), pools.cend(), [entity](auto &&pdata) { return pdata.pool && pdata.pool->contains(entity); });
     }
 
     /**
@@ -1076,11 +1156,6 @@ public:
      * Listeners are invoked **after** the component has been assigned to the
      * entity.
      *
-     * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned through signals. They can be caught only by copy or with
-     * const references.
-     *
      * @sa sink
      *
      * @tparam Component Type of component of which to get the sink.
@@ -1096,20 +1171,15 @@ public:
      *
      * A sink is an opaque object used to connect listeners to components.<br/>
      * The sink returned by this function can be used to receive notifications
-     * whenever an instance of the given component is explicitly replaced.
+     * whenever an instance of the given component is explicitly updated.
      *
      * The function type for a listener is equivalent to:
      *
      * @code{.cpp}
-     * void(registry<Entity> &, Entity, Component &);
+     * void(registry<Entity> &, Entity);
      * @endcode
      *
-     * Listeners are invoked **before** the component has been replaced.
-     *
-     * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned through signals. They can be caught only by copy or with
-     * const references.
+     * Listeners are invoked **after** the component has been updated.
      *
      * @sa sink
      *
@@ -1117,8 +1187,15 @@ public:
      * @return A temporary sink object.
      */
     template<typename Component>
+    auto on_update() {
+        return assure<Component>().on_update();
+    }
+
+    /*! @copydoc on_update */
+    template<typename Component>
+    [[deprecated("use registry::on_update instead")]]
     auto on_replace() {
-        return assure<Component>().on_replace();
+        return on_update<Component>();
     }
 
     /**
@@ -1137,11 +1214,6 @@ public:
      *
      * Listeners are invoked **before** the component has been removed from the
      * entity.
-     *
-     * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned through signals. They can be caught only by copy or with
-     * const references.
      *
      * @sa sink
      *
@@ -1357,9 +1429,9 @@ public:
             group_data candidate = {
                 size,
                 { new handler_type{}, [](void *instance) { delete static_cast<handler_type *>(instance); } },
-                []([[maybe_unused]] const ENTT_ID_TYPE ctype) ENTT_NOEXCEPT { return ((ctype == type_info<std::decay_t<Owned>>::id()) || ...); },
-                []([[maybe_unused]] const ENTT_ID_TYPE ctype) ENTT_NOEXCEPT { return ((ctype == type_info<std::decay_t<Get>>::id()) || ...); },
-                []([[maybe_unused]] const ENTT_ID_TYPE ctype) ENTT_NOEXCEPT { return ((ctype == type_info<Exclude>::id()) || ...); },
+                []([[maybe_unused]] const id_type ctype) ENTT_NOEXCEPT { return ((ctype == type_info<std::decay_t<Owned>>::id()) || ...); },
+                []([[maybe_unused]] const id_type ctype) ENTT_NOEXCEPT { return ((ctype == type_info<std::decay_t<Get>>::id()) || ...); },
+                []([[maybe_unused]] const id_type ctype) ENTT_NOEXCEPT { return ((ctype == type_info<Exclude>::id()) || ...); },
             };
 
             handler = static_cast<handler_type *>(candidate.group.get());
@@ -1401,13 +1473,13 @@ public:
 
             if constexpr(sizeof...(Owned) == 0) {
                 for(const auto entity: view<Owned..., Get...>(entt::exclude<Exclude...>)) {
-                    handler->current.construct(entity);
+                    handler->current.emplace(entity);
                 }
             } else {
                 // we cannot iterate backwards because we want to leave behind valid entities in case of owned types
-                std::for_each(std::get<0>(cpools).data(), std::get<0>(cpools).data() + std::get<0>(cpools).size(), [this, handler](const auto entity) {
-                    handler->template maybe_valid_if<std::tuple_element_t<0, std::tuple<std::decay_t<Owned>...>>>(*this, entity);
-                });
+                for(auto *first = std::get<0>(cpools).data(), *last = first + std::get<0>(cpools).size(); first != last; ++first) {
+                    handler->template maybe_valid_if<std::tuple_element_t<0, std::tuple<std::decay_t<Owned>...>>>(*this, *first);
+                }
             }
         }
 
@@ -1488,101 +1560,11 @@ public:
         std::vector<const sparse_set<Entity> *> selected(std::distance(first, last));
 
         std::transform(first, last, selected.begin(), [this](const auto ctype) {
-            const auto it = std::find_if(pools.cbegin(), pools.cend(), [ctype](auto &&pdata) { return pdata.type_id == ctype; });
+            const auto it = std::find_if(pools.cbegin(), pools.cend(), [ctype](auto &&pdata) { return pdata.pool && pdata.type_id == ctype; });
             return it == pools.cend() ? nullptr : it->pool.get();
         });
 
         return { std::move(selected) };
-    }
-
-    /**
-     * @brief Returns a full or partial copy of a registry.
-     *
-     * The components must be copyable for obvious reasons. The entities
-     * maintain their versions once copied.<br/>
-     * If no components are provided, the registry will try to clone all the
-     * existing pools. The ones for non-copyable types won't be cloned.
-     *
-     * This feature supports exclusion lists. The excluded types have higher
-     * priority than those indicated for cloning. An excluded type will never be
-     * cloned.
-     *
-     * @note
-     * There isn't an efficient way to know if all the entities are assigned at
-     * least one component once copied. Therefore, there may be orphans. It is
-     * up to the caller to clean up the registry if necessary.
-     *
-     * @note
-     * Listeners and groups aren't copied. It is up to the caller to connect the
-     * listeners of interest to the new registry and to set up groups.
-     *
-     * @warning
-     * Attempting to clone components that aren't copyable results in unexpected
-     * behaviors.<br/>
-     * A static assertion will abort the compilation when the components
-     * provided aren't copy constructible. Otherwise, an assertion will abort
-     * the execution at runtime in debug mode in case one or more pools cannot
-     * be cloned.
-     *
-     * @tparam Component Types of components to clone.
-     * @tparam Exclude Types of components not to be cloned.
-     * @return A fresh copy of the registry.
-     */
-    template<typename... Component, typename... Exclude>
-    [[deprecated("use ::visit and custom (eventually erased) functions instead")]]
-    basic_registry clone(exclude_t<Exclude...> = {}) const {
-        basic_registry other;
-
-        other.destroyed = destroyed;
-        other.entities = entities;
-
-        std::for_each(pools.cbegin(), pools.cend(), [&other](auto &&pdata) {
-            if constexpr(sizeof...(Component) == 0) {
-                if(pdata.assure && ((pdata.type_id != type_info<Exclude>::id()) && ...)) {
-                    pdata.assure(other, *pdata.pool);
-                }
-            } else {
-                static_assert(sizeof...(Exclude) == 0 && std::conjunction_v<std::is_copy_constructible<Component>...>);
-                if(pdata.assure && ((pdata.type_id == type_info<Component>::id()) || ...)) {
-                    pdata.assure(other, *pdata.pool);
-                }
-            }
-        });
-
-        return other;
-    }
-
-    /**
-     * @brief Stamps an entity onto another entity.
-     *
-     * This function supports exclusion lists. An excluded type will never be
-     * copied.
-     *
-     * @warning
-     * Attempting to copy components that aren't copyable results in unexpected
-     * behaviors.<br/>
-     * An assertion will abort the execution at runtime in debug mode in case
-     * one or more types cannot be copied.
-     *
-     * @warning
-     * Attempting to use invalid entities results in undefined behavior.<br/>
-     * An assertion will abort the execution at runtime in debug mode in case of
-     * invalid entities.
-     *
-     * @tparam Exclude Types of components not to be copied.
-     * @param dst A valid entity identifier to copy to.
-     * @param other The registry that owns the source entity.
-     * @param src A valid entity identifier to be copied.
-     */
-    template<typename... Exclude>
-    [[deprecated("use ::visit and custom (eventually erased) functions instead")]]
-    void stamp(const entity_type dst, const basic_registry &other, const entity_type src, exclude_t<Exclude...> = {}) {
-        std::for_each(other.pools.cbegin(), other.pools.cend(), [this, dst, src](auto &&pdata) {
-            if(((pdata.type_id != type_info<Exclude>::id()) && ...) && pdata.pool->has(src)) {
-                ENTT_ASSERT(pdata.stamp);
-                pdata.stamp(*this, dst, *pdata.pool, src);
-            }
-        });
     }
 
     /**
@@ -1595,20 +1577,9 @@ public:
      *
      * @return A temporary object to use to take snasphosts.
      */
+    [[deprecated("basic_snapshot has now a constructor that accepts a reference to a registry")]]
     entt::basic_snapshot<Entity> snapshot() const {
-        using follow_fn_type = entity_type(const basic_registry &, const entity_type);
-
-        const auto head = to_integral(destroyed);
-        const entity_type seed = (destroyed == null) ? destroyed : entity_type{head | (to_integral(entities[head]) & (traits_type::version_mask << traits_type::entity_shift))};
-
-        follow_fn_type *follow = [](const basic_registry &reg, const entity_type entity) -> entity_type {
-            const auto &others = reg.entities;
-            const auto entt = to_integral(entity) & traits_type::entity_mask;
-            const auto curr = to_integral(others[entt]) & traits_type::entity_mask;
-            return entity_type{curr | (to_integral(others[curr]) & (traits_type::version_mask << traits_type::entity_shift))};
-        };
-
-        return { this, seed, follow };
+        return { *this };
     }
 
     /**
@@ -1626,33 +1597,9 @@ public:
      *
      * @return A temporary object to use to load snasphosts.
      */
+    [[deprecated("basic_snapshot_loader has now a constructor that accepts a reference to a registry")]]
     basic_snapshot_loader<Entity> loader() {
-        using force_fn_type = void(basic_registry &, const entity_type, const bool);
-
-        force_fn_type *force = [](basic_registry &reg, const entity_type entity, const bool drop) {
-            const auto entt = to_integral(entity) & traits_type::entity_mask;
-            auto &others = reg.entities;
-
-            if(!(entt < others.size())) {
-                auto curr = others.size();
-                others.resize(entt + 1);
-                std::generate(others.data() + curr, others.data() + entt, [&curr]() { return entity_type(curr++); });
-            }
-
-            others[entt] = entity;
-
-            if(drop) {
-                reg.destroy(entity);
-                const auto version = to_integral(entity) & (traits_type::version_mask << traits_type::entity_shift);
-                others[entt] = entity_type{(to_integral(others[entt]) & traits_type::entity_mask) | version};
-            }
-        };
-
-        clear();
-        entities.clear();
-        destroyed = null;
-
-        return { this, force };
+        return { *this };
     }
 
     /**
@@ -1661,7 +1608,7 @@ public:
      * The signature of the function should be equivalent to the following:
      *
      * @code{.cpp}
-     * void(const ENTT_ID_TYPE);
+     * void(const id_type);
      * @endcode
      *
      * Returned identifiers are those of the components owned by the entity.
@@ -1679,7 +1626,7 @@ public:
     template<typename Func>
     void visit(entity_type entity, Func func) const {
         for(auto pos = pools.size(); pos; --pos) {
-            if(auto &pdata = pools[pos-1]; pdata.pool->has(entity)) {
+            if(const auto &pdata = pools[pos-1]; pdata.pool && pdata.pool->contains(entity)) {
                 func(pdata.type_id);
             }
         }
@@ -1691,7 +1638,7 @@ public:
      * The signature of the function should be equivalent to the following:
      *
      * @code{.cpp}
-     * void(const ENTT_ID_TYPE);
+     * void(const id_type);
      * @endcode
      *
      * Returned identifiers are those of the components managed by the registry.
@@ -1708,7 +1655,9 @@ public:
     template<typename Func>
     void visit(Func func) const {
         for(auto pos = pools.size(); pos; --pos) {
-            func(pools[pos-1].type_id);
+            if(const auto &pdata = pools[pos-1]; pdata.pool) {
+                func(pdata.type_id);
+            }
         }
     }
 
@@ -1726,8 +1675,8 @@ public:
     template<typename Type, typename... Args>
     Type & set(Args &&... args) {
         unset<Type>();
-        vars.emplace_back(new variable_handler<Type>{std::forward<Args>(args)...});
-        return static_cast<variable_handler<Type> &>(*vars.back()).value;
+        vars.push_back(variable_data{type_info<Type>::id(), { new Type{std::forward<Args>(args)...}, [](void *instance) { delete static_cast<Type *>(instance); } }});
+        return *static_cast<Type *>(vars.back().value.get());
     }
 
     /**
@@ -1736,8 +1685,8 @@ public:
      */
     template<typename Type>
     void unset() {
-        vars.erase(std::remove_if(vars.begin(), vars.end(), [](auto &&handler) {
-            return handler->type_id() == type_info<Type>::id();
+        vars.erase(std::remove_if(vars.begin(), vars.end(), [](auto &&var) {
+            return var.type_id == type_info<Type>::id();
         }), vars.end());
     }
 
@@ -1766,8 +1715,8 @@ public:
      */
     template<typename Type>
     const Type * try_ctx() const {
-        auto it = std::find_if(vars.cbegin(), vars.cend(), [](auto &&handler) { return handler->type_id() == type_info<Type>::id(); });
-        return it == vars.cend() ? nullptr : &static_cast<const variable_handler<Type> &>(*it->get()).value;
+        auto it = std::find_if(vars.cbegin(), vars.cend(), [](auto &&var) { return var.type_id == type_info<Type>::id(); });
+        return it == vars.cend() ? nullptr : static_cast<const Type *>(it->value.get());
     }
 
     /*! @copydoc try_ctx */
@@ -1807,7 +1756,7 @@ public:
      * The signature of the function should be equivalent to the following:
      *
      * @code{.cpp}
-     * void(const ENTT_ID_TYPE);
+     * void(const id_type);
      * @endcode
      *
      * Returned identifiers are those of the context variables currently set.
@@ -1824,15 +1773,15 @@ public:
     template<typename Func>
     void ctx(Func func) const {
         for(auto pos = vars.size(); pos; --pos) {
-            func(vars[pos-1]->type_id());
+            func(vars[pos-1].type_id);
         }
     }
 
 private:
     std::vector<group_data> groups{};
     mutable std::vector<pool_data> pools{};
-    std::vector<std::unique_ptr<basic_variable>> vars{};
     std::vector<entity_type> entities{};
+    std::vector<variable_data> vars{};
     entity_type destroyed{null};
 };
 

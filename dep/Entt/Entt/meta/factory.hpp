@@ -2,17 +2,19 @@
 #define ENTT_META_FACTORY_HPP
 
 
-#include <tuple>
 #include <array>
 #include <cstddef>
-#include <utility>
 #include <functional>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 #include "../config/config.h"
+#include "../core/fwd.hpp"
+#include "../core/type_info.hpp"
 #include "../core/type_traits.hpp"
 #include "../core/utility.hpp"
-#include "policy.hpp"
 #include "meta.hpp"
+#include "policy.hpp"
 
 
 namespace entt {
@@ -157,7 +159,7 @@ meta_any getter([[maybe_unused]] meta_any instance, [[maybe_unused]] meta_any in
     auto dispatch = [](auto &&value) {
         if constexpr(std::is_same_v<Policy, as_void_t>) {
             return meta_any{std::in_place_type<void>, std::forward<decltype(value)>(value)};
-        } else if constexpr(std::is_same_v<Policy, as_alias_t>) {
+        } else if constexpr(std::is_same_v<Policy, as_ref_t>) {
             return meta_any{std::ref(std::forward<decltype(value)>(value))};
         } else {
             static_assert(std::is_same_v<Policy, as_is_t>);
@@ -201,7 +203,7 @@ meta_any invoke([[maybe_unused]] meta_any instance, meta_any *args, std::index_s
         if constexpr(std::is_void_v<typename helper_type::return_type> || std::is_same_v<Policy, as_void_t>) {
             std::invoke(Candidate, *params...);
             return meta_any{std::in_place_type<void>};
-        } else if constexpr(std::is_same_v<Policy, as_alias_t>) {
+        } else if constexpr(std::is_same_v<Policy, as_ref_t>) {
             return meta_any{std::ref(std::invoke(Candidate, *params...))};
         } else {
             static_assert(std::is_same_v<Policy, as_is_t>);
@@ -378,32 +380,32 @@ class meta_factory<Type> {
     }
 
     template<typename Node>
-    bool exists(const ENTT_ID_TYPE alias, const Node *node) ENTT_NOEXCEPT {
-        return node && (node->alias == alias || exists(alias, node->next));
+    bool exists(const id_type id, const Node *node) ENTT_NOEXCEPT {
+        return node && (node->id == id || exists(id, node->next));
     }
 
 public:
     /**
-     * @brief Extends a meta type by assigning it an alias.
-     * @param value Unique identifier.
+     * @brief Makes a meta type _searchable_.
+     * @param id Optional unique identifier.
      * @return An extended meta factory for the given type.
      */
-    auto alias(const ENTT_ID_TYPE value) ENTT_NOEXCEPT {
+    auto type(const id_type id = type_info<Type>::id()) {
         auto * const node = internal::meta_info<Type>::resolve();
 
-        ENTT_ASSERT(!exists(value, *internal::meta_info<>::global));
-        ENTT_ASSERT(!exists(node, *internal::meta_info<>::global));
-        node->alias = value;
-        node->next = *internal::meta_info<>::global;
-        *internal::meta_info<>::global = node;
+        ENTT_ASSERT(!exists(id, *internal::meta_context::global));
+        ENTT_ASSERT(!exists(node, *internal::meta_context::global));
+        node->id = id;
+        node->next = *internal::meta_context::global;
+        *internal::meta_context::global = node;
 
         return meta_factory<Type, Type>{&node->prop};
     }
 
-    /*! @copydoc alias */
-    [[deprecated("Use ::alias instead")]]
-    auto type(const ENTT_ID_TYPE value) ENTT_NOEXCEPT {
-        return alias(value);
+    /*! @copydoc type */
+    [[deprecated("use ::type instead")]]
+    auto alias(const id_type id) ENTT_NOEXCEPT {
+        return type(id);
     }
 
     /**
@@ -614,11 +616,11 @@ public:
      *
      * @tparam Data The actual variable to attach to the meta type.
      * @tparam Policy Optional policy (no policy set by default).
-     * @param alias Unique identifier.
+     * @param id Unique identifier.
      * @return An extended meta factory for the parent type.
      */
     template<auto Data, typename Policy = as_is_t>
-    auto data(const ENTT_ID_TYPE alias) ENTT_NOEXCEPT {
+    auto data(const id_type id) ENTT_NOEXCEPT {
         auto * const type = internal::meta_info<Type>::resolve();
         internal::meta_data_node *curr = nullptr;
 
@@ -673,9 +675,9 @@ public:
             curr = &node;
         }
 
-        ENTT_ASSERT(!exists(alias, type->data));
+        ENTT_ASSERT(!exists(id, type->data));
         ENTT_ASSERT(!exists(curr, type->data));
-        curr->alias = alias;
+        curr->id = id;
         curr->next = type->data;
         type->data = curr;
 
@@ -699,11 +701,11 @@ public:
      * @tparam Setter The actual function to use as a setter.
      * @tparam Getter The actual function to use as a getter.
      * @tparam Policy Optional policy (no policy set by default).
-     * @param alias Unique identifier.
+     * @param id Unique identifier.
      * @return An extended meta factory for the parent type.
      */
     template<auto Setter, auto Getter, typename Policy = as_is_t>
-    auto data(const ENTT_ID_TYPE alias) ENTT_NOEXCEPT {
+    auto data(const id_type id) ENTT_NOEXCEPT {
         using underlying_type = std::invoke_result_t<decltype(Getter), Type &>;
         static_assert(std::is_invocable_v<decltype(Setter), Type &, underlying_type>);
         auto * const type = internal::meta_info<Type>::resolve();
@@ -720,9 +722,9 @@ public:
             &internal::getter<Type, Getter, Policy>
         };
 
-        ENTT_ASSERT(!exists(alias, type->data));
+        ENTT_ASSERT(!exists(id, type->data));
         ENTT_ASSERT(!exists(&node, type->data));
-        node.alias = alias;
+        node.id = id;
         node.next = type->data;
         type->data = &node;
 
@@ -739,11 +741,11 @@ public:
      *
      * @tparam Candidate The actual function to attach to the meta type.
      * @tparam Policy Optional policy (no policy set by default).
-     * @param alias Unique identifier.
+     * @param id Unique identifier.
      * @return An extended meta factory for the parent type.
      */
     template<auto Candidate, typename Policy = as_is_t>
-    auto func(const ENTT_ID_TYPE alias) ENTT_NOEXCEPT {
+    auto func(const id_type id) ENTT_NOEXCEPT {
         using helper_type = internal::meta_function_helper_t<decltype(Candidate)>;
         auto * const type = internal::meta_info<Type>::resolve();
 
@@ -762,9 +764,9 @@ public:
             }
         };
 
-        ENTT_ASSERT(!exists(alias, type->func));
+        ENTT_ASSERT(!exists(id, type->func));
         ENTT_ASSERT(!exists(&node, type->func));
-        node.alias = alias;
+        node.id = id;
         node.next = type->func;
         type->func = &node;
 
@@ -783,15 +785,8 @@ public:
      */
     auto reset() ENTT_NOEXCEPT {
         auto * const node = internal::meta_info<Type>::resolve();
-        auto **it = internal::meta_info<>::global;
 
-        while(*it && *it != node) {
-            it = &(*it)->next;
-        }
-
-        if(*it) {
-            *it = (*it)->next;
-        }
+        internal::meta_context::detach(node);
 
         const auto unregister_all = y_combinator{
             [](auto &&self, auto **curr, auto... member) {
@@ -811,7 +806,7 @@ public:
         unregister_all(&node->data, &internal::meta_data_node::prop);
         unregister_all(&node->func, &internal::meta_func_node::prop);
 
-        node->alias = {};
+        node->id = {};
         node->next = nullptr;
         node->dtor = nullptr;
 
@@ -836,41 +831,6 @@ inline meta_factory<Type> meta() ENTT_NOEXCEPT {
     auto * const node = internal::meta_info<Type>::resolve();
     // extended meta factory to allow assigning properties to opaque meta types
     return meta_factory<Type, Type>{&node->prop};
-}
-
-
-/**
- * @brief Returns the meta type associated with a given type.
- * @tparam Type Type to use to search for a meta type.
- * @return The meta type associated with the given type, if any.
- */
-template<typename Type>
-inline meta_type resolve() ENTT_NOEXCEPT {
-    return internal::meta_info<Type>::resolve();
-}
-
-
-/**
- * @brief Returns the meta type associated with a given alias.
- * @param alias Unique identifier.
- * @return The meta type associated with the given alias, if any.
- */
-inline meta_type resolve(const ENTT_ID_TYPE alias) ENTT_NOEXCEPT {
-    return internal::find_if([alias](const auto *curr) {
-        return curr->alias == alias;
-    }, *internal::meta_info<>::global);
-}
-
-
-/**
- * @brief Iterates all the reflected types.
- * @tparam Op Type of the function object to invoke.
- * @param op A valid function object.
- */
-template<typename Op>
-inline std::enable_if_t<std::is_invocable_v<Op, meta_type>, void>
-resolve(Op op) {
-    internal::visit<meta_type>(std::move(op), *internal::meta_info<>::global);
 }
 
 

@@ -9,6 +9,8 @@
 #include "../core/type_traits.hpp"
 #include "sparse_set.hpp"
 #include "storage.hpp"
+#include "utility.hpp"
+#include "entity.hpp"
 #include "fwd.hpp"
 
 
@@ -92,7 +94,7 @@ public:
     /*! @brief Unsigned integer type. */
     using size_type = std::size_t;
     /*! @brief Input iterator type. */
-    using iterator_type = typename sparse_set<Entity>::iterator_type;
+    using iterator = typename sparse_set<Entity>::iterator;
 
     /**
      * @brief Returns the number of existing components of the given type.
@@ -208,7 +210,7 @@ public:
      *
      * @return An iterator to the first entity that has the given components.
      */
-    iterator_type begin() const ENTT_NOEXCEPT {
+    iterator begin() const ENTT_NOEXCEPT {
         return handler->begin();
     }
 
@@ -227,7 +229,7 @@ public:
      * @return An iterator to the entity following the last entity that has the
      * given components.
      */
-    iterator_type end() const ENTT_NOEXCEPT {
+    iterator end() const ENTT_NOEXCEPT {
         return handler->end();
     }
 
@@ -257,7 +259,7 @@ public:
      * @return An iterator to the given entity if it's found, past the end
      * iterator otherwise.
      */
-    iterator_type find(const entity_type entt) const {
+    iterator find(const entity_type entt) const {
         const auto it = handler->find(entt);
         return it != end() && *it == entt ? it : end();
     }
@@ -277,7 +279,7 @@ public:
      * @return True if the group contains the given entity, false otherwise.
      */
     bool contains(const entity_type entt) const {
-        return handler->has(entt);
+        return handler->contains(entt);
     }
 
     /**
@@ -313,27 +315,27 @@ public:
      * object to them.
      *
      * The function object is invoked for each entity. It is provided with the
-     * entity itself and a set of references to all its components. The
+     * entity itself and a set of references to non-empty components. The
      * _constness_ of the components is as requested.<br/>
      * The signature of the function must be equivalent to one of the following
      * forms:
      *
      * @code{.cpp}
-     * void(const entity_type, Get &...);
-     * void(Get &...);
+     * void(const entity_type, Type &...);
+     * void(Type &...);
      * @endcode
      *
      * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned during iterations. They can be caught only by copy or with
-     * const references.
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
      *
      * @tparam Func Type of the function object to invoke.
      * @param func A valid function object.
      */
     template<typename Func>
     void each(Func func) const {
-        traverse(std::move(func), type_list<Get...>{});
+        using get_type_list = type_list_cat_t<std::conditional_t<ENTT_IS_EMPTY(Get), type_list<>, type_list<Get>>...>;
+        traverse(std::move(func), get_type_list{});
     }
 
     /**
@@ -351,15 +353,17 @@ public:
      * void(Type &...);
      * @endcode
      *
-     * @sa each
+     * @note
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
      *
      * @tparam Func Type of the function object to invoke.
      * @param func A valid function object.
      */
     template<typename Func>
+    [[deprecated("use ::each instead")]]
     void less(Func func) const {
-        using get_type_list = type_list_cat_t<std::conditional_t<ENTT_ENABLE_ETO(Get), type_list<>, type_list<Get>>...>;
-        traverse(std::move(func), get_type_list{});
+        each(std::move(func));
     }
 
     /**
@@ -501,7 +505,7 @@ class basic_group<Entity, exclude_t<Exclude...>, get_t<Get...>, Owned...> {
     using pool_type = std::conditional_t<std::is_const_v<Component>, const storage<Entity, std::remove_const_t<Component>>, storage<Entity, Component>>;
 
     template<typename Component>
-    using component_iterator_type = decltype(std::declval<pool_type<Component>>().begin());
+    using component_iterator = decltype(std::declval<pool_type<Component>>().begin());
 
     // we could use pool_type<Type> &..., but vs complains about it and refuses to compile for unknown reasons (most likely a bug)
     basic_group(const std::size_t &ref, const std::size_t &extent, storage<Entity, std::remove_const_t<Owned>> &... opool, storage<Entity, std::remove_const_t<Get>> &... gpool) ENTT_NOEXCEPT
@@ -518,14 +522,14 @@ class basic_group<Entity, exclude_t<Exclude...>, get_t<Get...>, Owned...> {
         for(auto next = *length; next; --next) {
             if constexpr(std::is_invocable_v<Func, decltype(get<Strong>({}))..., decltype(get<Weak>({}))...>) {
                 if constexpr(sizeof...(Weak) == 0) {
-                    func(*(std::get<component_iterator_type<Strong>>(it)++)...);
+                    func(*(std::get<component_iterator<Strong>>(it)++)...);
                 } else {
                     const auto entt = *(data++);
-                    func(*(std::get<component_iterator_type<Strong>>(it)++)..., std::get<pool_type<Weak> *>(pools)->get(entt)...);
+                    func(*(std::get<component_iterator<Strong>>(it)++)..., std::get<pool_type<Weak> *>(pools)->get(entt)...);
                 }
             } else {
                 const auto entt = *(data++);
-                func(entt, *(std::get<component_iterator_type<Strong>>(it)++)..., std::get<pool_type<Weak> *>(pools)->get(entt)...);
+                func(entt, *(std::get<component_iterator<Strong>>(it)++)..., std::get<pool_type<Weak> *>(pools)->get(entt)...);
             }
         }
     }
@@ -536,7 +540,7 @@ public:
     /*! @brief Unsigned integer type. */
     using size_type = std::size_t;
     /*! @brief Input iterator type. */
-    using iterator_type = typename sparse_set<Entity>::iterator_type;
+    using iterator = typename sparse_set<Entity>::iterator;
 
     /**
      * @brief Returns the number of existing components of the given type.
@@ -644,7 +648,7 @@ public:
      *
      * @return An iterator to the first entity that has the given components.
      */
-    iterator_type begin() const ENTT_NOEXCEPT {
+    iterator begin() const ENTT_NOEXCEPT {
         return std::get<0>(pools)->sparse_set<entity_type>::end() - *length;
     }
 
@@ -663,7 +667,7 @@ public:
      * @return An iterator to the entity following the last entity that has the
      * given components.
      */
-    iterator_type end() const ENTT_NOEXCEPT {
+    iterator end() const ENTT_NOEXCEPT {
         return std::get<0>(pools)->sparse_set<entity_type>::end();
     }
 
@@ -693,7 +697,7 @@ public:
      * @return An iterator to the given entity if it's found, past the end
      * iterator otherwise.
      */
-    iterator_type find(const entity_type entt) const {
+    iterator find(const entity_type entt) const {
         const auto it = std::get<0>(pools)->find(entt);
         return it != end() && it >= begin() && *it == entt ? it : end();
     }
@@ -713,7 +717,7 @@ public:
      * @return True if the group contains the given entity, false otherwise.
      */
     bool contains(const entity_type entt) const {
-        return std::get<0>(pools)->has(entt) && (std::get<0>(pools)->index(entt) < (*length));
+        return std::get<0>(pools)->contains(entt) && (std::get<0>(pools)->index(entt) < (*length));
     }
 
     /**
@@ -749,27 +753,28 @@ public:
      * object to them.
      *
      * The function object is invoked for each entity. It is provided with the
-     * entity itself and a set of references to all its components. The
+     * entity itself and a set of references to non-empty components. The
      * _constness_ of the components is as requested.<br/>
      * The signature of the function must be equivalent to one of the following
      * forms:
      *
      * @code{.cpp}
-     * void(const entity_type, Owned &..., Get &...);
-     * void(Owned &..., Get &...);
+     * void(const entity_type, Type &...);
+     * void(Type &...);
      * @endcode
      *
      * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned during iterations. They can be caught only by copy or with
-     * const references.
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
      *
      * @tparam Func Type of the function object to invoke.
      * @param func A valid function object.
      */
     template<typename Func>
     void each(Func func) const {
-        traverse(std::move(func), type_list<Owned...>{}, type_list<Get...>{});
+        using owned_type_list = type_list_cat_t<std::conditional_t<ENTT_IS_EMPTY(Owned), type_list<>, type_list<Owned>>...>;
+        using get_type_list = type_list_cat_t<std::conditional_t<ENTT_IS_EMPTY(Get), type_list<>, type_list<Get>>...>;
+        traverse(std::move(func), owned_type_list{}, get_type_list{});
     }
 
     /**
@@ -787,16 +792,17 @@ public:
      * void(Type &...);
      * @endcode
      *
-     * @sa each
+     * @note
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
      *
      * @tparam Func Type of the function object to invoke.
      * @param func A valid function object.
      */
     template<typename Func>
+    [[deprecated("use ::each instead")]]
     void less(Func func) const {
-        using owned_type_list = type_list_cat_t<std::conditional_t<ENTT_ENABLE_ETO(Owned), type_list<>, type_list<Owned>>...>;
-        using get_type_list = type_list_cat_t<std::conditional_t<ENTT_ENABLE_ETO(Get), type_list<>, type_list<Get>>...>;
-        traverse(std::move(func), owned_type_list{}, get_type_list{});
+        each(std::move(func));
     }
 
     /**

@@ -12,6 +12,7 @@
 #include "../core/type_traits.hpp"
 #include "sparse_set.hpp"
 #include "storage.hpp"
+#include "utility.hpp"
 #include "entity.hpp"
 #include "fwd.hpp"
 
@@ -71,18 +72,17 @@ class basic_view<Entity, exclude_t<Exclude...>, Component...> {
     using pool_type = std::conditional_t<std::is_const_v<Comp>, const storage<Entity, std::remove_const_t<Comp>>, storage<Entity, Comp>>;
 
     template<typename Comp>
-    using component_iterator_type = decltype(std::declval<pool_type<Comp>>().begin());
+    using component_iterator = decltype(std::declval<pool_type<Comp>>().begin());
 
-    using underlying_iterator_type = typename sparse_set<Entity>::iterator_type;
+    using underlying_iterator = typename sparse_set<Entity>::iterator;
     using unchecked_type = std::array<const sparse_set<Entity> *, (sizeof...(Component) - 1)>;
     using filter_type = std::array<const sparse_set<Entity> *, sizeof...(Exclude)>;
-    using traits_type = entt_traits<std::underlying_type_t<Entity>>;
 
-    class iterator {
+    class view_iterator final {
         friend class basic_view<Entity, exclude_t<Exclude...>, Component...>;
 
-        iterator(const sparse_set<Entity> *candidate, unchecked_type other, filter_type ignore, underlying_iterator_type curr) ENTT_NOEXCEPT
-            : view{candidate},
+        view_iterator(const sparse_set<Entity> &candidate, unchecked_type other, filter_type ignore, underlying_iterator curr) ENTT_NOEXCEPT
+            : view{&candidate},
               unchecked{other},
               filter{ignore},
               it{curr}
@@ -93,44 +93,44 @@ class basic_view<Entity, exclude_t<Exclude...>, Component...> {
         }
 
         bool valid() const {
-            return std::all_of(unchecked.cbegin(), unchecked.cend(), [entt = *it](const sparse_set<Entity> *curr) { return curr->has(entt); })
-                    && std::none_of(filter.cbegin(), filter.cend(), [entt = *it](const sparse_set<Entity> *curr) { return curr->has(entt); });
+            return std::all_of(unchecked.cbegin(), unchecked.cend(), [entt = *it](const sparse_set<Entity> *curr) { return curr->contains(entt); })
+                    && std::none_of(filter.cbegin(), filter.cend(), [entt = *it](const sparse_set<Entity> *curr) { return curr->contains(entt); });
         }
 
     public:
-        using difference_type = typename underlying_iterator_type::difference_type;
-        using value_type = typename underlying_iterator_type::value_type;
-        using pointer = typename underlying_iterator_type::pointer;
-        using reference = typename underlying_iterator_type::reference;
+        using difference_type = typename underlying_iterator::difference_type;
+        using value_type = typename underlying_iterator::value_type;
+        using pointer = typename underlying_iterator::pointer;
+        using reference = typename underlying_iterator::reference;
         using iterator_category = std::bidirectional_iterator_tag;
 
-        iterator() ENTT_NOEXCEPT = default;
+        view_iterator() ENTT_NOEXCEPT = default;
 
-        iterator & operator++() {
+        view_iterator & operator++() {
             while(++it != view->end() && !valid());
             return *this;
         }
 
-        iterator operator++(int) {
-            iterator orig = *this;
+        view_iterator operator++(int) {
+            view_iterator orig = *this;
             return operator++(), orig;
         }
 
-        iterator & operator--() ENTT_NOEXCEPT {
+        view_iterator & operator--() ENTT_NOEXCEPT {
             while(--it != view->begin() && !valid());
             return *this;
         }
 
-        iterator operator--(int) ENTT_NOEXCEPT {
-            iterator orig = *this;
+        view_iterator operator--(int) ENTT_NOEXCEPT {
+            view_iterator orig = *this;
             return operator--(), orig;
         }
 
-        bool operator==(const iterator &other) const ENTT_NOEXCEPT {
+        bool operator==(const view_iterator &other) const ENTT_NOEXCEPT {
             return other.it == it;
         }
 
-        bool operator!=(const iterator &other) const ENTT_NOEXCEPT {
+        bool operator!=(const view_iterator &other) const ENTT_NOEXCEPT {
             return !(*this == other);
         }
 
@@ -146,7 +146,7 @@ class basic_view<Entity, exclude_t<Exclude...>, Component...> {
         const sparse_set<Entity> *view;
         unchecked_type unchecked;
         filter_type filter;
-        underlying_iterator_type it;
+        underlying_iterator it;
     };
 
     // we could use pool_type<Component> &..., but vs complains about it and refuses to compile for unknown reasons (likely a bug)
@@ -154,21 +154,21 @@ class basic_view<Entity, exclude_t<Exclude...>, Component...> {
         : pools{&component..., &epool...}
     {}
 
-    const sparse_set<Entity> * candidate() const ENTT_NOEXCEPT {
-        return std::min({ static_cast<const sparse_set<Entity> *>(std::get<pool_type<Component> *>(pools))... }, [](const auto *lhs, const auto *rhs) {
+    const sparse_set<Entity> & candidate() const ENTT_NOEXCEPT {
+        return *std::min({ static_cast<const sparse_set<Entity> *>(std::get<pool_type<Component> *>(pools))... }, [](const auto *lhs, const auto *rhs) {
             return lhs->size() < rhs->size();
         });
     }
 
-    unchecked_type unchecked(const sparse_set<Entity> *view) const {
+    unchecked_type unchecked(const sparse_set<Entity> &view) const {
         std::size_t pos{};
         unchecked_type other{};
-        ((std::get<pool_type<Component> *>(pools) == view ? nullptr : (other[pos++] = std::get<pool_type<Component> *>(pools))), ...);
+        ((std::get<pool_type<Component> *>(pools) == &view ? nullptr : (other[pos++] = std::get<pool_type<Component> *>(pools))), ...);
         return other;
     }
 
     template<typename Comp, typename Other>
-    decltype(auto) get([[maybe_unused]] component_iterator_type<Comp> it, [[maybe_unused]] pool_type<Other> *cpool, [[maybe_unused]] const Entity entt) const {
+    decltype(auto) get([[maybe_unused]] component_iterator<Comp> it, [[maybe_unused]] pool_type<Other> *cpool, [[maybe_unused]] const Entity entt) const {
         if constexpr(std::is_same_v<Comp, Other>) {
             return *it;
         } else {
@@ -184,7 +184,7 @@ class basic_view<Entity, exclude_t<Exclude...>, Component...> {
             for(const auto entt: static_cast<const sparse_set<entity_type> &>(*std::get<pool_type<Comp> *>(pools))) {
                 auto curr = it++;
 
-                if(((std::is_same_v<Comp, Component> || std::get<pool_type<Component> *>(pools)->has(entt)) && ...) && (!std::get<pool_type<Exclude> *>(pools)->has(entt) && ...)) {
+                if(((std::is_same_v<Comp, Component> || std::get<pool_type<Component> *>(pools)->contains(entt)) && ...) && (!std::get<pool_type<Exclude> *>(pools)->contains(entt) && ...)) {
                     if constexpr(std::is_invocable_v<Func, decltype(get<Type>({}))...>) {
                         func(get<Comp, Type>(curr, std::get<pool_type<Type> *>(pools), entt)...);
                     } else {
@@ -194,7 +194,7 @@ class basic_view<Entity, exclude_t<Exclude...>, Component...> {
             }
         } else {
             for(const auto entt: static_cast<const sparse_set<entity_type> &>(*std::get<pool_type<Comp> *>(pools))) {
-                if(((std::is_same_v<Comp, Component> || std::get<pool_type<Component> *>(pools)->has(entt)) && ...) && (!std::get<pool_type<Exclude> *>(pools)->has(entt) && ...)) {
+                if(((std::is_same_v<Comp, Component> || std::get<pool_type<Component> *>(pools)->contains(entt)) && ...) && (!std::get<pool_type<Exclude> *>(pools)->contains(entt) && ...)) {
                     if constexpr(std::is_invocable_v<Func, decltype(get<Type>({}))...>) {
                         func(std::get<pool_type<Type> *>(pools)->get(entt)...);
                     } else {
@@ -211,7 +211,7 @@ public:
     /*! @brief Unsigned integer type. */
     using size_type = std::size_t;
     /*! @brief Input iterator type. */
-    using iterator_type = iterator;
+    using iterator = view_iterator;
 
     /**
      * @brief Returns the number of existing components of the given type.
@@ -305,10 +305,10 @@ public:
      *
      * @return An iterator to the first entity that has the given components.
      */
-    iterator_type begin() const {
-        const auto *view = candidate();
+    iterator begin() const {
+        const auto &view = candidate();
         const filter_type ignore{std::get<pool_type<Exclude> *>(pools)...};
-        return iterator_type{view, unchecked(view), ignore, view->begin()};
+        return iterator{view, unchecked(view), ignore, view.begin()};
     }
 
     /**
@@ -326,10 +326,10 @@ public:
      * @return An iterator to the entity following the last entity that has the
      * given components.
      */
-    iterator_type end() const {
-        const auto *view = candidate();
+    iterator end() const {
+        const auto &view = candidate();
         const filter_type ignore{std::get<pool_type<Exclude> *>(pools)...};
-        return iterator_type{view, unchecked(view), ignore, view->end()};
+        return iterator{view, unchecked(view), ignore, view.end()};
     }
 
     /**
@@ -358,10 +358,10 @@ public:
      * @return An iterator to the given entity if it's found, past the end
      * iterator otherwise.
      */
-    iterator_type find(const entity_type entt) const {
-        const auto *view = candidate();
+    iterator find(const entity_type entt) const {
+        const auto &view = candidate();
         const filter_type ignore{std::get<pool_type<Exclude> *>(pools)...};
-        iterator_type it{view, unchecked(view), ignore, view->find(entt)};
+        iterator it{view, unchecked(view), ignore, view.find(entt)};
         return (it != end() && *it == entt) ? it : end();
     }
 
@@ -371,8 +371,8 @@ public:
      * @return True if the view contains the given entity, false otherwise.
      */
     bool contains(const entity_type entt) const {
-        return (std::get<pool_type<Component> *>(pools)->has(entt) && ...)
-                && (!std::get<pool_type<Exclude> *>(pools)->has(entt) && ...);
+        return (std::get<pool_type<Component> *>(pools)->contains(entt) && ...)
+                && (!std::get<pool_type<Exclude> *>(pools)->contains(entt) && ...);
     }
 
     /**
@@ -411,70 +411,6 @@ public:
      * object to them.
      *
      * The function object is invoked for each entity. It is provided with the
-     * entity itself and a set of references to all its components. The
-     * _constness_ of the components is as requested.<br/>
-     * The signature of the function must be equivalent to one of the following
-     * forms:
-     *
-     * @code{.cpp}
-     * void(const entity_type, Component &...);
-     * void(Component &...);
-     * @endcode
-     *
-     * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned during iterations. They can be caught only by copy or with
-     * const references.
-     *
-     * @tparam Func Type of the function object to invoke.
-     * @param func A valid function object.
-     */
-    template<typename Func>
-    void each(Func func) const {
-        const auto *view = candidate();
-        ((std::get<pool_type<Component> *>(pools) == view ? each<Component>(std::move(func)) : void()), ...);
-    }
-
-    /**
-     * @brief Iterates entities and components and applies the given function
-     * object to them.
-     *
-     * The function object is invoked for each entity. It is provided with the
-     * entity itself and a set of references to all its components. The
-     * _constness_ of the components is as requested.<br/>
-     * The signature of the function must be equivalent to one of the following
-     * forms:
-     *
-     * @code{.cpp}
-     * void(const entity_type, Component &...);
-     * void(Component &...);
-     * @endcode
-     *
-     * The pool of the suggested component is used to lead the iterations. The
-     * returned entities will therefore respect the order of the pool associated
-     * with that type.<br/>
-     * It is no longer guaranteed that the performance is the best possible, but
-     * there will be greater control over the order of iteration.
-     *
-     * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned during iterations. They can be caught only by copy or with
-     * const references.
-     *
-     * @tparam Comp Type of component to use to enforce the iteration order.
-     * @tparam Func Type of the function object to invoke.
-     * @param func A valid function object.
-     */
-    template<typename Comp, typename Func>
-    void each(Func func) const {
-        traverse<Comp>(std::move(func), type_list<Component...>{});
-    }
-
-    /**
-     * @brief Iterates entities and components and applies the given function
-     * object to them.
-     *
-     * The function object is invoked for each entity. It is provided with the
      * entity itself and a set of references to non-empty components. The
      * _constness_ of the components is as requested.<br/>
      * The signature of the function must be equivalent to one of the following
@@ -485,31 +421,22 @@ public:
      * void(Type &...);
      * @endcode
      *
-     * @sa each
+     * @note
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
      *
      * @tparam Func Type of the function object to invoke.
      * @param func A valid function object.
      */
     template<typename Func>
-    void less(Func func) const {
-        const auto *view = candidate();
-        ((std::get<pool_type<Component> *>(pools) == view ? less<Component>(std::move(func)) : void()), ...);
+    void each(Func func) const {
+        const auto &view = candidate();
+        ((std::get<pool_type<Component> *>(pools) == &view ? each<Component>(std::move(func)) : void()), ...);
     }
 
     /**
      * @brief Iterates entities and components and applies the given function
      * object to them.
-     *
-     * The function object is invoked for each entity. It is provided with the
-     * entity itself and a set of references to non-empty components. The
-     * _constness_ of the components is as requested.<br/>
-     * The signature of the function must be equivalent to one of the following
-     * forms:
-     *
-     * @code{.cpp}
-     * void(const entity_type, Type &...);
-     * void(Type &...);
-     * @endcode
      *
      * The pool of the suggested component is used to lead the iterations. The
      * returned entities will therefore respect the order of the pool associated
@@ -524,9 +451,59 @@ public:
      * @param func A valid function object.
      */
     template<typename Comp, typename Func>
-    void less(Func func) const {
-        using non_empty_type = type_list_cat_t<std::conditional_t<ENTT_ENABLE_ETO(Component), type_list<>, type_list<Component>>...>;
+    void each(Func func) const {
+        using non_empty_type = type_list_cat_t<std::conditional_t<ENTT_IS_EMPTY(Component), type_list<>, type_list<Component>>...>;
         traverse<Comp>(std::move(func), non_empty_type{});
+    }
+
+    /**
+     * @brief Iterates entities and components and applies the given function
+     * object to them.
+     *
+     * The function object is invoked for each entity. It is provided with the
+     * entity itself and a set of references to non-empty components. The
+     * _constness_ of the components is as requested.<br/>
+     * The signature of the function must be equivalent to one of the following
+     * forms:
+     *
+     * @code{.cpp}
+     * void(const entity_type, Type &...);
+     * void(Type &...);
+     * @endcode
+     *
+     * @note
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
+     *
+     * @tparam Func Type of the function object to invoke.
+     * @param func A valid function object.
+     */
+    template<typename Func>
+    [[deprecated("use ::each instead")]]
+    void less(Func func) const {
+        each(std::move(func));
+    }
+
+    /**
+     * @brief Iterates entities and components and applies the given function
+     * object to them.
+     *
+     * The pool of the suggested component is used to lead the iterations. The
+     * returned entities will therefore respect the order of the pool associated
+     * with that type.<br/>
+     * It is no longer guaranteed that the performance is the best possible, but
+     * there will be greater control over the order of iteration.
+     *
+     * @sa less
+     *
+     * @tparam Comp Type of component to use to enforce the iteration order.
+     * @tparam Func Type of the function object to invoke.
+     * @param func A valid function object.
+     */
+    template<typename Comp, typename Func>
+    [[deprecated("use ::each instead")]]
+    void less(Func func) const {
+        each<Comp>(std::move(func));
     }
 
 private:
@@ -584,7 +561,7 @@ public:
     /*! @brief Unsigned integer type. */
     using size_type = std::size_t;
     /*! @brief Input iterator type. */
-    using iterator_type = typename sparse_set<Entity>::iterator_type;
+    using iterator = typename sparse_set<Entity>::iterator;
 
     /**
      * @brief Returns the number of entities that have the given component.
@@ -648,7 +625,7 @@ public:
      *
      * @return An iterator to the first entity that has the given component.
      */
-    iterator_type begin() const ENTT_NOEXCEPT {
+    iterator begin() const ENTT_NOEXCEPT {
         return pool->sparse_set<Entity>::begin();
     }
 
@@ -667,7 +644,7 @@ public:
      * @return An iterator to the entity following the last entity that has the
      * given component.
      */
-    iterator_type end() const ENTT_NOEXCEPT {
+    iterator end() const ENTT_NOEXCEPT {
         return pool->sparse_set<Entity>::end();
     }
 
@@ -697,7 +674,7 @@ public:
      * @return An iterator to the given entity if it's found, past the end
      * iterator otherwise.
      */
-    iterator_type find(const entity_type entt) const {
+    iterator find(const entity_type entt) const {
         const auto it = pool->find(entt);
         return it != end() && *it == entt ? it : end();
     }
@@ -717,7 +694,7 @@ public:
      * @return True if the view contains the given entity, false otherwise.
      */
     bool contains(const entity_type entt) const {
-        return pool->has(entt);
+        return pool->contains(entt);
     }
 
     /**
@@ -747,8 +724,8 @@ public:
      * object to them.
      *
      * The function object is invoked for each entity. It is provided with the
-     * entity itself and a reference to its component. The _constness_ of the
-     * component is as requested.<br/>
+     * entity itself and a reference to the component if it's a non-empty one.
+     * The _constness_ of the component is as requested.<br/>
      * The signature of the function must be equivalent to one of the following
      * forms:
      *
@@ -758,59 +735,15 @@ public:
      * @endcode
      *
      * @note
-     * Empty types aren't explicitly instantiated. Therefore, temporary objects
-     * are returned during iterations. They can be caught only by copy or with
-     * const references.
+     * Empty types aren't explicitly instantiated and therefore they are never
+     * returned during iterations.
      *
      * @tparam Func Type of the function object to invoke.
      * @param func A valid function object.
      */
     template<typename Func>
     void each(Func func) const {
-        if constexpr(std::is_invocable_v<Func, decltype(get({}))>) {
-            for(auto &&component: *pool) {
-                func(component);
-            }
-        } else {
-            auto raw = pool->begin();
-
-            for(const auto entt: *this) {
-                func(entt, *(raw++));
-            }
-        }
-    }
-
-    /**
-     * @brief Iterates entities and components and applies the given function
-     * object to them.
-     *
-     * The function object is invoked for each entity. It is provided with the
-     * entity itself and a reference to its component if it's a non-empty one.
-     * The _constness_ of the component is as requested.<br/>
-     * The signature of the function must be equivalent to one of the following
-     * forms in case the component isn't an empty one:
-     *
-     * @code{.cpp}
-     * void(const entity_type, Component &);
-     * void(Component &);
-     * @endcode
-     *
-     * In case the component is an empty one instead, the following forms are
-     * accepted:
-     *
-     * @code{.cpp}
-     * void(const entity_type);
-     * void();
-     * @endcode
-     *
-     * @sa each
-     *
-     * @tparam Func Type of the function object to invoke.
-     * @param func A valid function object.
-     */
-    template<typename Func>
-    void less(Func func) const {
-        if constexpr(ENTT_ENABLE_ETO(Component)) {
+        if constexpr(ENTT_IS_EMPTY(Component)) {
             if constexpr(std::is_invocable_v<Func>) {
                 for(auto pos = pool->size(); pos; --pos) {
                     func();
@@ -821,8 +754,25 @@ public:
                 }
             }
         } else {
-            each(std::move(func));
+            if constexpr(std::is_invocable_v<Func, decltype(get({}))>) {
+                for(auto &&component: *pool) {
+                    func(component);
+                }
+            } else {
+                auto raw = pool->begin();
+
+                for(const auto entt: *this) {
+                    func(entt, *(raw++));
+                }
+            }
         }
+    }
+
+    /*! @copydoc each */
+    template<typename Func>
+    [[deprecated("use ::each instead")]]
+    void less(Func func) const {
+        each(std::move(func));
     }
 
 private:

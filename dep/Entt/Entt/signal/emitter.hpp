@@ -2,15 +2,16 @@
 #define ENTT_SIGNAL_EMITTER_HPP
 
 
-#include <type_traits>
-#include <functional>
 #include <algorithm>
-#include <utility>
-#include <memory>
-#include <vector>
-#include <list>
+#include <functional>
 #include <iterator>
+#include <list>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
 #include "../config/config.h"
+#include "../core/fwd.hpp"
 #include "../core/type_info.hpp"
 
 
@@ -44,11 +45,11 @@ class emitter {
         virtual ~basic_pool() = default;
         virtual bool empty() const ENTT_NOEXCEPT = 0;
         virtual void clear() ENTT_NOEXCEPT = 0;
-        virtual ENTT_ID_TYPE type_id() const ENTT_NOEXCEPT = 0;
+        virtual id_type type_id() const ENTT_NOEXCEPT = 0;
     };
 
     template<typename Event>
-    struct pool_handler: basic_pool {
+    struct pool_handler final: basic_pool {
         using listener_type = std::function<void(const Event &, Derived &)>;
         using element_type = std::pair<bool, listener_type>;
         using container_type = std::list<element_type>;
@@ -113,7 +114,7 @@ class emitter {
             on_list.remove_if([](auto &&element) { return element.first; });
         }
 
-        ENTT_ID_TYPE type_id() const ENTT_NOEXCEPT override {
+        id_type type_id() const ENTT_NOEXCEPT override {
             return type_info<Event>::id();
         }
 
@@ -126,17 +127,23 @@ class emitter {
     template<typename Event>
     const pool_handler<Event> & assure() const {
         static_assert(std::is_same_v<Event, std::decay_t<Event>>);
-        static std::size_t index{pools.size()};
 
-        if(const auto length = pools.size(); !(index < length) || pools[index]->type_id() != type_info<Event>::id()) {
-            for(index = {}; index < length && pools[index]->type_id() != type_info<Event>::id(); ++index);
+        if constexpr(has_type_index_v<Event>) {
+            const auto index = type_index<Event>::value();
 
-            if(index == pools.size()) {
-                pools.emplace_back(new pool_handler<Event>{});
+            if(!(index < pools.size())) {
+                pools.resize(index+1);
             }
-        }
 
-        return static_cast<pool_handler<Event> &>(*pools[index]);
+            if(!pools[index]) {
+                pools[index].reset(new pool_handler<Event>{});
+            }
+
+            return static_cast<pool_handler<Event> &>(*pools[index]);
+        } else {
+            auto it = std::find_if(pools.begin(), pools.end(), [id = type_info<Event>::id()](const auto &cpool) { return id == cpool->type_id(); });
+            return static_cast<pool_handler<Event> &>(it == pools.cend() ? *pools.emplace_back(new pool_handler<Event>{}) : **it);
+        }
     }
 
     template<typename Event>
@@ -290,7 +297,9 @@ public:
      */
     void clear() ENTT_NOEXCEPT {
         for(auto &&cpool: pools) {
-            cpool->clear();
+            if(cpool) {
+                cpool->clear();
+            }
         }
     }
 
@@ -310,7 +319,7 @@ public:
      */
     bool empty() const ENTT_NOEXCEPT {
         return std::all_of(pools.cbegin(), pools.cend(), [](auto &&cpool) {
-            return cpool->empty();
+            return !cpool || cpool->empty();
         });
     }
 

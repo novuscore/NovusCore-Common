@@ -42,24 +42,26 @@
 #endif
 
 
-#ifndef ENTT_DISABLE_ETO
+#ifndef ENTT_NO_ETO
 #   include <type_traits>
-#   define ENTT_ENABLE_ETO(Type) (std::is_default_constructible_v<Type> && std::is_empty_v<Type>)
+#   define ENTT_IS_EMPTY(Type) std::is_empty_v<Type>
 #else
+#   include <type_traits>
 #   // sfinae-friendly definition
-#   define ENTT_ENABLE_ETO(Type) (false && std::is_void_v<Type>)
+#   define ENTT_IS_EMPTY(Type) (false && std::is_empty_v<Type>)
 #endif
 
 
 #ifndef ENTT_STANDARD_CPP
 #   if defined _MSC_VER
 #      define ENTT_PRETTY_FUNCTION __FUNCSIG__
-#      define ENTT_PRETTY_FUNCTION_CONSTEXPR ENTT_PRETTY_FUNCTION
+#      define ENTT_PRETTY_FUNCTION_CONSTEXPR(...) constexpr
 #   elif defined __clang__ || (defined __GNUC__ && __GNUC__ > 8)
 #      define ENTT_PRETTY_FUNCTION __PRETTY_FUNCTION__
-#      define ENTT_PRETTY_FUNCTION_CONSTEXPR ENTT_PRETTY_FUNCTION
+#      define ENTT_PRETTY_FUNCTION_CONSTEXPR(...) constexpr
 #   elif defined __GNUC__
 #      define ENTT_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#      define ENTT_PRETTY_FUNCTION_CONSTEXPR(...) __VA_ARGS__
 #   endif
 #endif
 

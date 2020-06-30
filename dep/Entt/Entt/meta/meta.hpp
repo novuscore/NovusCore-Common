@@ -3,10 +3,11 @@
 
 
 #include <cstddef>
-#include <utility>
 #include <functional>
 #include <type_traits>
+#include <utility>
 #include "../config/config.h"
+#include "../core/fwd.hpp"
 #include "../core/type_info.hpp"
 #include "../core/type_traits.hpp"
 
@@ -71,7 +72,7 @@ struct meta_dtor_node {
 
 
 struct meta_data_node {
-    ENTT_ID_TYPE alias;
+    id_type id;
     meta_type_node * const parent;
     meta_data_node * next;
     meta_prop_node * prop;
@@ -85,7 +86,7 @@ struct meta_data_node {
 
 struct meta_func_node {
     using size_type = std::size_t;
-    ENTT_ID_TYPE alias;
+    id_type id;
     meta_type_node * const parent;
     meta_func_node * next;
     meta_prop_node * prop;
@@ -100,8 +101,8 @@ struct meta_func_node {
 
 struct meta_type_node {
     using size_type = std::size_t;
-    const ENTT_ID_TYPE type_id;
-    ENTT_ID_TYPE alias;
+    const id_type type_id;
+    id_type id;
     meta_type_node * next;
     meta_prop_node * prop;
     const bool is_void;
@@ -129,7 +130,7 @@ struct meta_type_node {
 
 
 template<typename Type, typename Op, typename Node>
-void visit(Op op, Node *node) {
+void visit(Op &op, Node *node) {
     while(node) {
         op(Type{node});
         node = node->next;
@@ -138,7 +139,7 @@ void visit(Op op, Node *node) {
 
 
 template<auto Member, typename Type, typename Op>
-void visit(Op op, const internal::meta_type_node *node) {
+void visit(Op &op, const internal::meta_type_node *node) {
     if(node) {
         internal::visit<Type>(op, node->*Member);
         auto *next = node->base;
@@ -152,7 +153,7 @@ void visit(Op op, const internal::meta_type_node *node) {
 
 
 template<typename Op, typename Node>
-auto find_if(Op op, Node *node) {
+auto find_if(const Op &op, Node *node) {
     while(node && !op(node)) {
         node = node->next;
     }
@@ -162,7 +163,7 @@ auto find_if(Op op, Node *node) {
 
 
 template<auto Member, typename Op>
-auto find_if(Op op, const meta_type_node *node)
+auto find_if(const Op &op, const meta_type_node *node)
 -> decltype(find_if(op, node->*Member)) {
     decltype(find_if(op, node->*Member)) ret = nullptr;
 
@@ -190,42 +191,53 @@ bool compare(const void *lhs, const void *rhs) {
 }
 
 
-template<typename... Type>
-struct meta_node {
-    static_assert(std::is_same_v<Type..., std::remove_cv_t<std::remove_reference_t<Type>>...>);
+struct ENTT_API meta_context {
+    inline static meta_type_node *local = nullptr;
+    inline static meta_type_node **global = &local;
 
-    inline static meta_type_node * resolve() ENTT_NOEXCEPT {
-        static meta_type_node node{
-            type_info<Type...>::id(),
-            {},
-            nullptr,
-            nullptr,
-            std::is_void_v<Type...>,
-            std::is_integral_v<Type...>,
-            std::is_floating_point_v<Type...>,
-            std::is_array_v<Type...>,
-            std::is_enum_v<Type...>,
-            std::is_union_v<Type...>,
-            std::is_class_v<Type...>,
-            std::is_pointer_v<Type...>,
-            std::is_pointer_v<Type...> && std::is_function_v<std::remove_pointer_t<Type>...>,
-            std::is_member_object_pointer_v<Type...>,
-            std::is_member_function_pointer_v<Type...>,
-            std::extent_v<Type...>,
-            &compare<Type...>, // workaround for an issue with VS2017
-            &meta_node<std::remove_const_t<std::remove_pointer_t<Type>>...>::resolve,
-            &meta_node<std::remove_const_t<std::remove_extent_t<Type>>...>::resolve
-        };
+    static void detach(const meta_type_node *node) ENTT_NOEXCEPT {
+        auto **it = global;
 
-        return &node;
+        while(*it && *it != node) {
+            it = &(*it)->next;
+        }
+
+        if(*it) {
+            *it = (*it)->next;
+        }
     }
 };
 
 
-template<>
-struct meta_node<> {
-    inline static meta_type_node *local = nullptr;
-    inline static meta_type_node **global = &local;
+template<typename Type>
+struct ENTT_API meta_node {
+    static_assert(std::is_same_v<Type, std::remove_cv_t<std::remove_reference_t<Type>>>);
+
+    static meta_type_node * resolve() ENTT_NOEXCEPT {
+        static meta_type_node node{
+            type_info<Type>::id(),
+            {},
+            nullptr,
+            nullptr,
+            std::is_void_v<Type>,
+            std::is_integral_v<Type>,
+            std::is_floating_point_v<Type>,
+            std::is_array_v<Type>,
+            std::is_enum_v<Type>,
+            std::is_union_v<Type>,
+            std::is_class_v<Type>,
+            std::is_pointer_v<Type>,
+            std::is_pointer_v<Type> && std::is_function_v<std::remove_pointer_t<Type>>,
+            std::is_member_object_pointer_v<Type>,
+            std::is_member_function_pointer_v<Type>,
+            std::extent_v<Type>,
+            &compare<Type>, // workaround for an issue with VS2017
+            &meta_node<std::remove_const_t<std::remove_pointer_t<Type>>>::resolve,
+            &meta_node<std::remove_const_t<std::remove_extent_t<Type>>>::resolve
+        };
+
+        return &node;
+    }
 };
 
 
@@ -249,11 +261,11 @@ struct meta_ctx {
      * @param other A valid context to which to bind.
      */
     static void bind(meta_ctx other) ENTT_NOEXCEPT {
-        internal::meta_info<>::global = other.ctx;
+        internal::meta_context::global = other.ctx;
     }
 
 private:
-    internal::meta_type_node **ctx{&internal::meta_info<>::local};
+    internal::meta_type_node **ctx{&internal::meta_context::local};
 };
 
 
@@ -349,7 +361,6 @@ public:
         node = internal::meta_info<Type>::resolve();
 
         if constexpr(!std::is_void_v<Type>) {
-            static_assert(std::is_copy_constructible_v<Type>);
             using traits_type = type_traits<std::remove_cv_t<std::remove_reference_t<Type>>>;
             traits_type::instance(*this, std::forward<Args>(args)...);
             destroy_fn = &traits_type::destroy;
@@ -555,11 +566,19 @@ public:
     }
 
     /**
+     * @brief Aliasing constructor.
+     * @return A meta any that shares a reference to an unmanaged object.
+     */
+    meta_any ref() const ENTT_NOEXCEPT {
+        return meta_any{node, instance};
+    }
+
+    /**
      * @brief Indirection operator for aliasing construction.
-     * @return An alias to the contained object.
+     * @return A meta any that shares a reference to an unmanaged object.
      */
     meta_any operator *() const ENTT_NOEXCEPT {
-        return meta_any{node, instance};
+        return ref();
     }
 
     /**
@@ -620,7 +639,7 @@ private:
  *
  * A handle doesn't perform copies and isn't responsible for the contained
  * object. It doesn't prolong the lifetime of the pointed instance.<br/>
- * Handles are used mainly to gnerate aliases for actual objects when needed.
+ * Handles are used to generate meta references to actual objects when needed.
  */
 struct meta_handle {
     /*! @brief Default constructor. */
@@ -629,7 +648,7 @@ struct meta_handle {
     {}
 
     /**
-     * @brief Creates an alias for the actual object.
+     * @brief Creates a handle that points to an unmanaged object.
      * @tparam Type Type of object to use to initialize the container.
      * @param value An instance of an object to use to initialize the container.
      */
@@ -835,7 +854,7 @@ struct meta_ctor {
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_prop>, void>
     prop(Op op) const {
-        internal::visit<meta_prop>(std::move(op), node->prop);
+        internal::visit<meta_prop>(op, node->prop);
     }
 
     /**
@@ -869,15 +888,15 @@ struct meta_data {
         : node{curr}
     {}
 
-    /*! @copydoc meta_type::alias */
-    ENTT_ID_TYPE alias() const ENTT_NOEXCEPT {
-        return node->alias;
+    /*! @copydoc meta_type::id */
+    id_type id() const ENTT_NOEXCEPT {
+        return node->id;
     }
 
-    /*! @copydoc alias*/
-    [[deprecated("Use ::alias instead")]]
-    ENTT_ID_TYPE identifier() const ENTT_NOEXCEPT {
-        return alias();
+    /*! @copydoc id */
+    [[deprecated("use ::id instead")]]
+    id_type alias() const ENTT_NOEXCEPT {
+        return id();
     }
 
     /*! @copydoc meta_base::parent */
@@ -978,7 +997,7 @@ struct meta_data {
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_prop>, void>
     prop(Op op) const {
-        internal::visit<meta_prop>(std::move(op), node->prop);
+        internal::visit<meta_prop>(op, node->prop);
     }
 
     /**
@@ -1015,15 +1034,15 @@ struct meta_func {
         : node{curr}
     {}
 
-    /*! @copydoc meta_type::alias */
-    ENTT_ID_TYPE alias() const ENTT_NOEXCEPT {
-        return node->alias;
+    /*! @copydoc meta_type::id */
+    id_type id() const ENTT_NOEXCEPT {
+        return node->id;
     }
 
-    /*! @copydoc alias */
-    [[deprecated("Use ::alias instead")]]
-    ENTT_ID_TYPE identifier() const ENTT_NOEXCEPT {
-        return alias();
+    /*! @copydoc id */
+    [[deprecated("use ::id instead")]]
+    id_type alias() const ENTT_NOEXCEPT {
+        return id();
     }
 
     /*! @copydoc meta_base::parent */
@@ -1095,7 +1114,7 @@ struct meta_func {
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_prop>, void>
     prop(Op op) const {
-        internal::visit<meta_prop>(std::move(op), node->prop);
+        internal::visit<meta_prop>(op, node->prop);
     }
 
     /**
@@ -1145,25 +1164,25 @@ public:
     {}
 
     /**
-     * @brief Returns the id of the underlying type.
-     * @return The id of the underlying type.
+     * @brief Returns the type id of the underlying type.
+     * @return The type id of the underlying type.
      */
-    ENTT_ID_TYPE id() const ENTT_NOEXCEPT {
+    id_type type_id() const ENTT_NOEXCEPT {
         return node->type_id;
     }
 
     /**
-     * @brief Returns the alias assigned to a given meta object.
-     * @return The alias assigned to the meta object.
+     * @brief Returns the identifier assigned to a given meta object.
+     * @return The identifier assigned to the meta object.
      */
-    ENTT_ID_TYPE alias() const ENTT_NOEXCEPT {
-        return node->alias;
+    id_type id() const ENTT_NOEXCEPT {
+        return node->id;
     }
 
-    /*! @copydoc alias */
-    [[deprecated("Use ::alias instead")]]
-    ENTT_ID_TYPE identifier() const ENTT_NOEXCEPT {
-        return alias();
+    /*! @copydoc id */
+    [[deprecated("use ::id instead")]]
+    id_type alias() const ENTT_NOEXCEPT {
+        return id();
     }
 
     /**
@@ -1300,17 +1319,17 @@ public:
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_base>, void>
     base(Op op) const {
-        internal::visit<&internal::meta_type_node::base, meta_base>(std::move(op), node);
+        internal::visit<&internal::meta_type_node::base, meta_base>(op, node);
     }
 
     /**
-     * @brief Returns the meta base associated with a given alias.
-     * @param alias Unique identifier.
-     * @return The meta base associated with the given alias, if any.
+     * @brief Returns the meta base associated with a given identifier.
+     * @param id Unique identifier.
+     * @return The meta base associated with the given identifier, if any.
      */
-    meta_base base(const ENTT_ID_TYPE alias) const {
-        return internal::find_if<&internal::meta_type_node::base>([alias](const auto *curr) {
-            return curr->type()->alias == alias;
+    meta_base base(const id_type id) const {
+        return internal::find_if<&internal::meta_type_node::base>([id](const auto *curr) {
+            return curr->type()->id == id;
         }, node);
     }
 
@@ -1321,7 +1340,7 @@ public:
      */
     template<typename Op>
     void conv(Op op) const {
-        internal::visit<&internal::meta_type_node::conv, meta_conv>(std::move(op), node);
+        internal::visit<&internal::meta_type_node::conv, meta_conv>(op, node);
     }
 
     /**
@@ -1344,7 +1363,7 @@ public:
      */
     template<typename Op>
     void ctor(Op op) const {
-        internal::visit<meta_ctor>(std::move(op), node->ctor);
+        internal::visit<meta_ctor>(op, node->ctor);
     }
 
     /**
@@ -1368,20 +1387,20 @@ public:
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_data>, void>
     data(Op op) const {
-        internal::visit<&internal::meta_type_node::data, meta_data>(std::move(op), node);
+        internal::visit<&internal::meta_type_node::data, meta_data>(op, node);
     }
 
     /**
-     * @brief Returns the meta data associated with a given alias.
+     * @brief Returns the meta data associated with a given identifier.
      *
      * The meta data of the base classes will also be visited, if any.
      *
-     * @param alias Unique identifier.
-     * @return The meta data associated with the given alias, if any.
+     * @param id Unique identifier.
+     * @return The meta data associated with the given identifier, if any.
      */
-    meta_data data(const ENTT_ID_TYPE alias) const {
-        return internal::find_if<&internal::meta_type_node::data>([alias](const auto *curr) {
-            return curr->alias == alias;
+    meta_data data(const id_type id) const {
+        return internal::find_if<&internal::meta_type_node::data>([id](const auto *curr) {
+            return curr->id == id;
         }, node);
     }
 
@@ -1396,20 +1415,20 @@ public:
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_func>, void>
     func(Op op) const {
-        internal::visit<&internal::meta_type_node::func, meta_func>(std::move(op), node);
+        internal::visit<&internal::meta_type_node::func, meta_func>(op, node);
     }
 
     /**
-     * @brief Returns the meta function associated with a given alias.
+     * @brief Returns the meta function associated with a given identifier.
      *
      * The meta functions of the base classes will also be visited, if any.
      *
-     * @param alias Unique identifier.
-     * @return The meta function associated with the given alias, if any.
+     * @param id Unique identifier.
+     * @return The meta function associated with the given identifier, if any.
      */
-    meta_func func(const ENTT_ID_TYPE alias) const {
-        return internal::find_if<&internal::meta_type_node::func>([alias](const auto *curr) {
-            return curr->alias == alias;
+    meta_func func(const id_type id) const {
+        return internal::find_if<&internal::meta_type_node::func>([id](const auto *curr) {
+            return curr->id == id;
         }, node);
     }
 
@@ -1455,7 +1474,7 @@ public:
     template<typename Op>
     std::enable_if_t<std::is_invocable_v<Op, meta_prop>, void>
     prop(Op op) const {
-        internal::visit<&internal::meta_type_node::prop, meta_prop>(std::move(op), node);
+        internal::visit<&internal::meta_type_node::prop, meta_prop>(op, node);
     }
 
     /**
@@ -1488,6 +1507,11 @@ public:
      */
     bool operator==(const meta_type &other) const ENTT_NOEXCEPT {
         return (!node && !other.node) || (node && other.node && node->type_id == other.node->type_id);
+    }
+
+    /*! @brief Removes a meta object from the list of searchable types. */
+    void detach() ENTT_NOEXCEPT {
+        internal::meta_context::detach(node);
     }
 
 private:

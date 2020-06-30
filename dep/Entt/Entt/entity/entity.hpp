@@ -6,6 +6,7 @@
 #include <type_traits>
 #include "../config/config.h"
 #include "../core/type_traits.hpp"
+#include "../core/fwd.hpp"
 
 
 namespace entt {
@@ -140,13 +141,13 @@ public:
 
 template<typename Entity>
 constexpr bool operator==(const Entity entity, null other) ENTT_NOEXCEPT {
-    return other == entity;
+    return other.operator==(entity);
 }
 
 
 template<typename Entity>
 constexpr bool operator!=(const Entity entity, null other) ENTT_NOEXCEPT {
-    return other != entity;
+    return !(other == entity);
 }
 
 
@@ -159,6 +160,10 @@ constexpr bool operator!=(const Entity entity, null other) ENTT_NOEXCEPT {
  */
 
 
+/*! @brief Default entity identifier. */
+ENTT_OPAQUE_TYPE(entity, id_type);
+
+
 /**
  * @brief Compile-time constant for null entities.
  *
@@ -166,7 +171,7 @@ constexpr bool operator!=(const Entity entity, null other) ENTT_NOEXCEPT {
  * any allowed type. Similarly, there exist comparision operators between the
  * null entity and any other entity identifier.
  */
-constexpr auto null = internal::null{};
+inline constexpr auto null = internal::null{};
 
 
 }
