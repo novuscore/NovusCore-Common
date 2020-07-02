@@ -69,7 +69,7 @@ namespace PacketUtils
     }
     inline bool Write_SMSG_SEND_FULL_INTERNAL_SERVER_INFO(std::shared_ptr<Bytebuffer>& buffer, const u8* serverInfoData, size_t numServers)
     {
-        if (!buffer->Put(Opcode::SMSG_SEND_REMOVE_INTERNAL_SERVER_INFO))
+        if (!buffer->Put(Opcode::SMSG_SEND_FULL_INTERNAL_SERVER_INFO))
             return false;
 
         size_t packetSize = (sizeof(entt::entity) + sizeof(AddressType) + sizeof(u32) + sizeof(u16)) * numServers;
@@ -92,7 +92,7 @@ namespace PacketUtils
     }
     inline bool Write_SMSG_SEND_ADD_INTERNAL_SERVER_INFO(std::shared_ptr<Bytebuffer>& buffer, entt::entity entity, AddressType type, u32 address, u16 port)
     {
-        if (!buffer->Put(Opcode::SMSG_SEND_REMOVE_INTERNAL_SERVER_INFO))
+        if (!buffer->Put(Opcode::SMSG_SEND_ADD_INTERNAL_SERVER_INFO))
             return false;
 
         if (!buffer->PutU16(sizeof(entt::entity) + sizeof(AddressType) + sizeof(u32) + sizeof(u16)))

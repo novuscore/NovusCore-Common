@@ -2,6 +2,7 @@
 #include <Networking/BaseSocket.h>
 #include <Utils/DebugHandler.h>
 #include <entity/fwd.hpp>
+#include "ConnectionStatus.h"
 
 enum BuildType
 {
@@ -136,15 +137,6 @@ struct ServerLogonHandshake
 };
 #pragma pack(pop)
 
-enum class ConnectionStatus
-{
-    AUTH_NONE,
-    AUTH_CHALLENGE,
-    AUTH_HANDSHAKE,
-    AUTH_FAILED,
-    AUTH_SUCCESS,
-    CONNECTED,
-};
 class NetworkClient : public BaseSocket
 {
 public:

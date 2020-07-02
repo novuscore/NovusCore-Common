@@ -1,18 +1,13 @@
 #include "MessageHandler.h"
 #include <NovusTypes.h>
+#include "../Networking/NetworkClient.h"
 #include "../Networking/NetworkPacket.h"
 
-MessageHandler::MessageHandler()
-{
-    for (i32 i = 0; i < static_cast<u16>(Opcode::MAX_COUNT); i++)
-    {
-        handlers[i] = nullptr;
-    }
-}
+MessageHandler::MessageHandler() { }
 
-void MessageHandler::SetMessageHandler(Opcode opcode, MessageHandlerFn func)
+void MessageHandler::SetMessageHandler(Opcode opcode, OpcodeHandler handler)
 {
-    handlers[static_cast<u16>(opcode)] = func;
+    handlers[static_cast<u16>(opcode)] = handler;
 }
 
 bool MessageHandler::CallHandler(std::shared_ptr<NetworkClient> connection, NetworkPacket* packet)
@@ -20,5 +15,10 @@ bool MessageHandler::CallHandler(std::shared_ptr<NetworkClient> connection, Netw
     if (packet->header.opcode <= Opcode::INVALID || packet->header.opcode > Opcode::MAX_COUNT)
         return false;
 
-    return handlers[static_cast<u16>(packet->header.opcode)] ? handlers[static_cast<u16>(packet->header.opcode)](connection, packet) : false;
+    const OpcodeHandler& opcodeHandler = handlers[static_cast<u16>(packet->header.opcode)];
+
+    if (!opcodeHandler.handler || packet->header.size < opcodeHandler.minSize || connection->GetStatus() != opcodeHandler.status)
+        return false;
+
+    return opcodeHandler.handler(connection, packet);
 }
