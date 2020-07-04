@@ -27,8 +27,7 @@ public:
         _connector = std::move(connector);
         _thread = std::thread(&DatabaseWorker::Run, this);
 
-        // TODO: We need to solve the data race before we can use .detach while testing
-        //_thread.detach();
+        _thread.detach();
     }
 
     void Close()

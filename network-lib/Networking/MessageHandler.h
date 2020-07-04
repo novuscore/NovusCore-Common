@@ -11,10 +11,12 @@ typedef bool (*MessageHandlerFn)(std::shared_ptr<NetworkClient>, NetworkPacket*)
 struct OpcodeHandler
 {
     OpcodeHandler() { }
-    OpcodeHandler(ConnectionStatus inStatus, u16 inMinSize, MessageHandlerFn inHandler) :status(inStatus), minSize(inMinSize), handler(inHandler) { }
+    OpcodeHandler(ConnectionStatus inStatus, u16 inMinMaxSize, MessageHandlerFn inHandler) :status(inStatus), minSize(inMinMaxSize), maxSize(inMinMaxSize), handler(inHandler) { }
+    OpcodeHandler(ConnectionStatus inStatus, u16 inMinSize, i16 inMaxSize, MessageHandlerFn inHandler) :status(inStatus), minSize(inMinSize), maxSize(inMaxSize), handler(inHandler) { }
 
     ConnectionStatus status = ConnectionStatus::AUTH_NONE;
     u16 minSize = 0;
+    i16 maxSize = 0;
     MessageHandlerFn handler = nullptr;
 };
 

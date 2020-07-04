@@ -24,11 +24,11 @@
 #pragma once
 
 #include "BaseSocket.h"
+#include "Defines.h"
 
 #include <asio.hpp>
 #include <Utils/ByteBuffer.h>
 
-#define NETWORK_BUFFER_SIZE 8192
 class BaseSocket : public std::enable_shared_from_this<BaseSocket>
 {
 public:

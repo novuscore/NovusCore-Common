@@ -17,7 +17,7 @@ bool MessageHandler::CallHandler(std::shared_ptr<NetworkClient> connection, Netw
 
     const OpcodeHandler& opcodeHandler = handlers[static_cast<u16>(packet->header.opcode)];
 
-    if (!opcodeHandler.handler || packet->header.size < opcodeHandler.minSize || connection->GetStatus() != opcodeHandler.status)
+    if (!opcodeHandler.handler || packet->header.size < opcodeHandler.minSize || (packet->header.size > opcodeHandler.maxSize && opcodeHandler.maxSize != -1) || connection->GetStatus() != opcodeHandler.status)
         return false;
 
     return opcodeHandler.handler(connection, packet);
