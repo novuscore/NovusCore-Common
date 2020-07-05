@@ -7,7 +7,7 @@
 class NetworkClient;
 struct NetworkPacket;
 
-typedef bool (*MessageHandlerFn)(std::shared_ptr<NetworkClient>, NetworkPacket*);
+typedef bool (*MessageHandlerFn)(std::shared_ptr<NetworkClient>, std::shared_ptr<NetworkPacket>&);
 struct OpcodeHandler
 {
     OpcodeHandler() { }
@@ -26,7 +26,7 @@ public:
     MessageHandler();
 
     void SetMessageHandler(Opcode opcode, OpcodeHandler handler);
-    bool CallHandler(std::shared_ptr<NetworkClient> connection, NetworkPacket* packet);
+    bool CallHandler(std::shared_ptr<NetworkClient> connection, std::shared_ptr<NetworkPacket>& packet);
 
 private:
     OpcodeHandler handlers[static_cast<u16>(Opcode::MAX_COUNT)];

@@ -72,7 +72,7 @@ public:
         _socket->async_read_some(asio::buffer(_receiveBuffer->GetReadPointer(), _receiveBuffer->GetReadSpace()),
             std::bind(&BaseSocket::_internalRead, this, std::placeholders::_1, std::placeholders::_2));
     }
-    void Send(Bytebuffer* buffer)
+    void Send(std::shared_ptr<Bytebuffer>& buffer)
     {
         if (!buffer->IsEmpty() || buffer->IsFull())
         {
