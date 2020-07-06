@@ -5,12 +5,14 @@
 #  if defined _WIN32 || defined __CYGWIN__
 #    include <windows.h>
 #  elif defined __linux__
-#    include <assert.h>
 #    include <stdio.h>
 #    include <inttypes.h>
 #  elif defined __APPLE__
 #    include <mach/mach_host.h>
 #    include <mach/host_info.h>
+#  elif defined BSD
+#    include <sys/types.h>
+#    include <sys/sysctl.h>
 #  endif
 
 namespace tracy
@@ -43,10 +45,15 @@ void SysTime::ReadTimes()
 {
     uint64_t user, nice, system;
     FILE* f = fopen( "/proc/stat", "r" );
-    assert( f );
-    fscanf( f, "cpu %" PRIu64 " %" PRIu64 " %" PRIu64" %" PRIu64, &user, &nice, &system, &idle );
-    fclose( f );
-    used = user + nice + system;
+    if( f )
+    {
+        int read = fscanf( f, "cpu %" PRIu64 " %" PRIu64 " %" PRIu64" %" PRIu64, &user, &nice, &system, &idle );
+        fclose( f );
+        if (read == 4)
+        {
+            used = user + nice + system;
+        }
+    }
 }
 
 #  elif defined __APPLE__
@@ -58,6 +65,17 @@ void SysTime::ReadTimes()
     host_statistics( mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>( &info ), &cnt ); 
     used = info.cpu_ticks[CPU_STATE_USER] + info.cpu_ticks[CPU_STATE_NICE] + info.cpu_ticks[CPU_STATE_SYSTEM];
     idle = info.cpu_ticks[CPU_STATE_IDLE];
+}
+
+#  elif defined BSD
+
+void SysTime::ReadTimes()
+{
+    u_long data[5];
+    size_t sz = sizeof( data );
+    sysctlbyname( "kern.cp_time", &data, &sz, nullptr, 0 );
+    used = data[0] + data[1] + data[2] + data[3];
+    idle = data[4];
 }
 
 #endif
@@ -79,7 +97,7 @@ float SysTime::Get()
 
 #if defined _WIN32 || defined __CYGWIN__
     return diffUsed == 0 ? -1 : ( diffUsed - diffIdle ) * 100.f / diffUsed;
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined BSD
     const auto total = diffUsed + diffIdle;
     return total == 0 ? -1 : diffUsed * 100.f / total;
 #endif
