@@ -72,7 +72,7 @@ namespace PacketUtils
         if (!buffer->Put(Opcode::SMSG_SEND_FULL_INTERNAL_SERVER_INFO))
             return false;
 
-        size_t packetSize = (sizeof(entt::entity) + sizeof(AddressType) + sizeof(u32) + sizeof(u16)) * numServers;
+        size_t packetSize = (sizeof(entt::entity) + sizeof(AddressType) + 1 + sizeof(u32) + sizeof(u16)) * numServers;
         if (!buffer->PutU16(static_cast<u16>(packetSize)))
             return false;
         
@@ -90,7 +90,7 @@ namespace PacketUtils
 
         return true;
     }
-    inline bool Write_SMSG_SEND_ADD_INTERNAL_SERVER_INFO(std::shared_ptr<Bytebuffer>& buffer, entt::entity entity, AddressType type, u32 address, u16 port)
+    inline bool Write_SMSG_SEND_ADD_INTERNAL_SERVER_INFO(std::shared_ptr<Bytebuffer>& buffer, entt::entity entity, AddressType type, u8 realmId, u32 address, u16 port)
     {
         if (!buffer->Put(Opcode::SMSG_SEND_ADD_INTERNAL_SERVER_INFO))
             return false;
@@ -104,6 +104,9 @@ namespace PacketUtils
         if (!buffer->Put(type))
             return false;
 
+        if (!buffer->PutU8(realmId))
+            return false;
+
         if (!buffer->PutU32(address))
             return false;
 
@@ -112,7 +115,7 @@ namespace PacketUtils
 
         return true;
     }
-    inline bool Write_SMSG_SEND_REMOVE_INTERNAL_SERVER_INFO(std::shared_ptr<Bytebuffer>& buffer, entt::entity entity, AddressType type)
+    inline bool Write_SMSG_SEND_REMOVE_INTERNAL_SERVER_INFO(std::shared_ptr<Bytebuffer>& buffer, entt::entity entity, AddressType type, u8 realmId)
     {
         if (!buffer->Put(Opcode::SMSG_SEND_REMOVE_INTERNAL_SERVER_INFO))
             return false;
@@ -124,6 +127,9 @@ namespace PacketUtils
             return false;
 
         if (!buffer->Put(type))
+            return false;
+
+        if (!buffer->PutU8(realmId))
             return false;
 
         return true;
