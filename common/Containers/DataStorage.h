@@ -1,24 +1,22 @@
 #pragma once
 #include "../NovusTypes.h"
 #include <robin_hood.h>
-#include <entity/entity.hpp>
+#include <entity/fwd.hpp>
 
 class DataStorage
 {
 public:
     DataStorage() 
     {
-        // Preallocate memory for 32 of each type
-        const u32 PREALLOCATE_AMOUNT = 32;
-        _dataMapU8s.reserve(PREALLOCATE_AMOUNT);
-        _dataMapU16s.reserve(PREALLOCATE_AMOUNT);
-        _dataMapU32s.reserve(PREALLOCATE_AMOUNT);
-        _dataMapU64s.reserve(PREALLOCATE_AMOUNT);
-        _dataMapF32s.reserve(PREALLOCATE_AMOUNT);
-        _dataMapF64s.reserve(PREALLOCATE_AMOUNT);
-        _dataMapStrings.reserve(PREALLOCATE_AMOUNT);
-        _dataMapPointers.reserve(PREALLOCATE_AMOUNT);
-        _dataMapEntities.reserve(PREALLOCATE_AMOUNT);
+        // Preallocate memory for each type
+        _dataMapU8s.reserve(32);
+        _dataMapU16s.reserve(32);
+        _dataMapU32s.reserve(32);
+        _dataMapU64s.reserve(32);
+        _dataMapF32s.reserve(32);
+        _dataMapF64s.reserve(32);
+        _dataMapStrings.reserve(32);
+        _dataMapPointers.reserve(32);
     }
 
     void Clear()
@@ -31,7 +29,6 @@ public:
         _dataMapF64s.clear();
         _dataMapStrings.clear();
         _dataMapPointers.clear();
-        _dataMapEntities.clear();
     }
 
     bool PutU8(u32 nameHash, u8 val)
@@ -300,34 +297,34 @@ public:
 
     bool PutEntity(u32 nameHash, entt::entity val)
     {
-        if (_dataMapEntities.find(nameHash) != _dataMapEntities.end())
+        if (_dataMapU32s.find(nameHash) != _dataMapU32s.end())
             return false;
 
-        _dataMapEntities[nameHash] = val;
+        _dataMapU32s[nameHash] = entt::to_integral(val);
         return true;
     }
     void EmplaceEntity(u32 nameHash, entt::entity val)
     {
-        _dataMapEntities[nameHash] = val;
+        _dataMapU32s[nameHash] = entt::to_integral(val);
     }
     bool GetEntity(u32 nameHash, entt::entity& val)
     {
-        if (_dataMapEntities.find(nameHash) == _dataMapEntities.end())
+        if (_dataMapU32s.find(nameHash) == _dataMapU32s.end())
             return false;
 
-        val = _dataMapEntities[nameHash];
+        val = entt::entity(_dataMapU32s[nameHash]);
         return true;
     }
     bool HasEntity(u32 nameHash)
     {
-        return _dataMapEntities.find(nameHash) != _dataMapEntities.end();
+        return _dataMapU32s.find(nameHash) != _dataMapU32s.end();
     }
     bool ClearEntity(u32 nameHash)
     {
-        if (_dataMapEntities.find(nameHash) == _dataMapEntities.end())
+        if (_dataMapU32s.find(nameHash) == _dataMapU32s.end())
             return false;
 
-        _dataMapEntities.erase(nameHash);
+        _dataMapU32s.erase(nameHash);
         return true;
     }
 private:
@@ -339,5 +336,4 @@ private:
     robin_hood::unordered_map<u32, f64> _dataMapF64s;
     robin_hood::unordered_map<u32, std::string> _dataMapStrings;
     robin_hood::unordered_map<u32, void*> _dataMapPointers;
-    robin_hood::unordered_map<u32, entt::entity> _dataMapEntities;
 };
