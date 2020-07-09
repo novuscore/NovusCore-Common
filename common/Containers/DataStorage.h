@@ -1,13 +1,14 @@
 #pragma once
 #include "../NovusTypes.h"
 #include <robin_hood.h>
+#include <entity/fwd.hpp>
 
 class DataStorage
 {
 public:
     DataStorage() 
     {
-        // Preallocate memory for 32 of each type
+        // Preallocate memory for each type
         _dataMapU8s.reserve(32);
         _dataMapU16s.reserve(32);
         _dataMapU32s.reserve(32);
@@ -30,7 +31,7 @@ public:
         _dataMapPointers.clear();
     }
 
-    bool PutU8(u32 nameHash, u8 val)
+    inline bool PutU8(u32 nameHash, u8 val)
     {
         if (_dataMapU8s.find(nameHash) != _dataMapU8s.end())
             return false;
@@ -38,7 +39,11 @@ public:
         _dataMapU8s[nameHash] = val;
         return true;
     }
-    bool GetU8(u32 nameHash, u8& val)
+    inline void EmplaceU8(u32 nameHash, u8 val)
+    {
+        _dataMapU8s[nameHash] = val;
+    }
+    inline bool GetU8(u32 nameHash, u8& val)
     {
         if (_dataMapU8s.find(nameHash) == _dataMapU8s.end())
             return false;
@@ -46,7 +51,11 @@ public:
         val = _dataMapU8s[nameHash];
         return true;
     }
-    bool ClearU8(u32 nameHash)
+    inline bool HasU8(u32 nameHash)
+    {
+        return _dataMapU8s.find(nameHash) != _dataMapU8s.end();
+    }
+    inline bool ClearU8(u32 nameHash)
     {
         if (_dataMapU8s.find(nameHash) == _dataMapU8s.end())
             return false;
@@ -55,7 +64,7 @@ public:
         return true;
     }
 
-    bool PutU16(u16 nameHash, u16 val)
+    inline bool PutU16(u16 nameHash, u16 val)
     {
         if (_dataMapU16s.find(nameHash) != _dataMapU16s.end())
             return false;
@@ -63,7 +72,11 @@ public:
         _dataMapU16s[nameHash] = val;
         return true;
     }
-    bool GetU16(u16 nameHash, u16& val)
+    inline void EmplaceU16(u32 nameHash, u16 val)
+    {
+        _dataMapU16s[nameHash] = val;
+    }
+    inline bool GetU16(u16 nameHash, u16& val)
     {
         if (_dataMapU16s.find(nameHash) == _dataMapU16s.end())
             return false;
@@ -71,7 +84,11 @@ public:
         val = _dataMapU16s[nameHash];
         return true;
     }
-    bool ClearU16(u32 nameHash)
+    inline bool HasU16(u32 nameHash)
+    {
+        return _dataMapU16s.find(nameHash) != _dataMapU16s.end();
+    }
+    inline bool ClearU16(u32 nameHash)
     {
         if (_dataMapU16s.find(nameHash) == _dataMapU16s.end())
             return false;
@@ -80,7 +97,7 @@ public:
         return true;
     }
 
-    bool PutU32(u32 nameHash, u32 val)
+    inline bool PutU32(u32 nameHash, u32 val)
     {
         if (_dataMapU32s.find(nameHash) != _dataMapU32s.end())
             return false;
@@ -88,7 +105,11 @@ public:
         _dataMapU32s[nameHash] = val;
         return true;
     }
-    bool GetU32(u32 nameHash, u32& val)
+    inline void EmplaceU32(u32 nameHash, u32 val)
+    {
+        _dataMapU32s[nameHash] = val;
+    }
+    inline bool GetU32(u32 nameHash, u32& val)
     {
         if (_dataMapU32s.find(nameHash) == _dataMapU32s.end())
             return false;
@@ -96,7 +117,11 @@ public:
         val = _dataMapU32s[nameHash];
         return true;
     }
-    bool ClearU32(u32 nameHash)
+    inline bool HasU32(u32 nameHash)
+    {
+        return _dataMapU32s.find(nameHash) != _dataMapU32s.end();
+    }
+    inline bool ClearU32(u32 nameHash)
     {
         if (_dataMapU32s.find(nameHash) == _dataMapU32s.end())
             return false;
@@ -105,7 +130,7 @@ public:
         return true;
     }
 
-    bool PutU64(u32 nameHash, u64 val)
+    inline bool PutU64(u32 nameHash, u64 val)
     {
         if (_dataMapU64s.find(nameHash) != _dataMapU64s.end())
             return false;
@@ -113,7 +138,11 @@ public:
         _dataMapU64s[nameHash] = val;
         return true;
     }
-    bool GetU64(u32 nameHash, u64& val)
+    inline void EmplaceU64(u32 nameHash, u64 val)
+    {
+        _dataMapU64s[nameHash] = val;
+    }
+    inline bool GetU64(u32 nameHash, u64& val)
     {
         if (_dataMapU64s.find(nameHash) == _dataMapU64s.end())
             return false;
@@ -121,7 +150,11 @@ public:
         val = _dataMapU64s[nameHash];
         return true;
     }
-    bool ClearU64(u32 nameHash)
+    inline bool HasU64(u32 nameHash)
+    {
+        return _dataMapU64s.find(nameHash) != _dataMapU64s.end();
+    }
+    inline bool ClearU64(u32 nameHash)
     {
         if (_dataMapU64s.find(nameHash) == _dataMapU64s.end())
             return false;
@@ -130,7 +163,7 @@ public:
         return true;
     }
 
-    bool PutF32(u32 nameHash, f32 val)
+    inline bool PutF32(u32 nameHash, f32 val)
     {
         if (_dataMapF32s.find(nameHash) != _dataMapF32s.end())
             return false;
@@ -138,7 +171,11 @@ public:
         _dataMapF32s[nameHash] = val;
         return true;
     }
-    bool GetF32(u32 nameHash, f32& val)
+    inline void EmplaceF32(u32 nameHash, f32 val)
+    {
+        _dataMapF32s[nameHash] = val;
+    }
+    inline bool GetF32(u32 nameHash, f32& val)
     {
         if (_dataMapF32s.find(nameHash) == _dataMapF32s.end())
             return false;
@@ -146,7 +183,11 @@ public:
         val = _dataMapF32s[nameHash];
         return true;
     }
-    bool ClearF32(u32 nameHash)
+    inline bool HasF32(u32 nameHash)
+    {
+        return _dataMapF32s.find(nameHash) != _dataMapF32s.end();
+    }
+    inline bool ClearF32(u32 nameHash)
     {
         if (_dataMapF32s.find(nameHash) == _dataMapF32s.end())
             return false;
@@ -155,7 +196,7 @@ public:
         return true;
     }
 
-    bool PutF64(u32 nameHash, f64 val)
+    inline bool PutF64(u32 nameHash, f64 val)
     {
         if (_dataMapF64s.find(nameHash) != _dataMapF64s.end())
             return false;
@@ -163,7 +204,11 @@ public:
         _dataMapF64s[nameHash] = val;
         return true;
     }
-    bool GetF64(u32 nameHash, f64& val)
+    inline void EmplaceF64(u32 nameHash, f64 val)
+    {
+        _dataMapF64s[nameHash] = val;
+    }
+    inline bool GetF64(u32 nameHash, f64& val)
     {
         if (_dataMapF64s.find(nameHash) == _dataMapF64s.end())
             return false;
@@ -171,7 +216,11 @@ public:
         val = _dataMapF64s[nameHash];
         return true;
     }
-    bool ClearF64(u32 nameHash)
+    inline bool HasF64(u32 nameHash)
+    {
+        return _dataMapF64s.find(nameHash) != _dataMapF64s.end();
+    }
+    inline bool ClearF64(u32 nameHash)
     {
         if (_dataMapF64s.find(nameHash) == _dataMapF64s.end())
             return false;
@@ -180,7 +229,7 @@ public:
         return true;
     }
 
-    bool PutString(u32 nameHash, std::string val)
+    inline bool PutString(u32 nameHash, std::string val)
     {
         if (_dataMapStrings.find(nameHash) != _dataMapStrings.end())
             return false;
@@ -188,7 +237,11 @@ public:
         _dataMapStrings[nameHash] = val;
         return true;
     }
-    bool GetString(u32 nameHash, std::string& val)
+    inline void EmplaceString(u32 nameHash, std::string val)
+    {
+        _dataMapStrings[nameHash] = val;
+    }
+    inline bool GetString(u32 nameHash, std::string& val)
     {
         if (_dataMapStrings.find(nameHash) == _dataMapStrings.end())
             return false;
@@ -196,7 +249,11 @@ public:
         val = _dataMapStrings[nameHash];
         return true;
     }
-    bool ClearString(u32 nameHash)
+    inline bool HasString(u32 nameHash)
+    {
+        return _dataMapStrings.find(nameHash) != _dataMapStrings.end();
+    }
+    inline bool ClearString(u32 nameHash)
     {
         if (_dataMapStrings.find(nameHash) == _dataMapStrings.end())
             return false;
@@ -205,7 +262,7 @@ public:
         return true;
     }
 
-    bool PutPointer(u32 nameHash, void* val)
+    inline bool PutPointer(u32 nameHash, void* val)
     {
         if (_dataMapPointers.find(nameHash) != _dataMapPointers.end())
             return false;
@@ -213,7 +270,11 @@ public:
         _dataMapPointers[nameHash] = val;
         return true;
     }
-    bool GetPointer(u32 nameHash, void*& val)
+    inline void EmplacePointer(u32 nameHash, void* val)
+    {
+        _dataMapPointers[nameHash] = val;
+    }
+    inline bool GetPointer(u32 nameHash, void*& val)
     {
         if (_dataMapPointers.find(nameHash) == _dataMapPointers.end())
             return false;
@@ -221,7 +282,11 @@ public:
         val = _dataMapPointers[nameHash];
         return true;
     }
-    bool ClearPointer(u32 nameHash)
+    inline bool HasPointer(u32 nameHash)
+    {
+        return _dataMapPointers.find(nameHash) != _dataMapPointers.end();
+    }
+    inline bool ClearPointer(u32 nameHash)
     {
         if (_dataMapPointers.find(nameHash) == _dataMapPointers.end())
             return false;
@@ -230,6 +295,30 @@ public:
         return true;
     }
 
+    inline bool PutEntity(u32 nameHash, entt::entity val)
+    {
+        return PutU32(nameHash, entt::to_integral(val));
+    }
+    inline void EmplaceEntity(u32 nameHash, entt::entity val)
+    {
+        EmplaceU32(nameHash, entt::to_integral(val));
+    }
+    inline bool GetEntity(u32 nameHash, entt::entity& val)
+    {
+        if (_dataMapU32s.find(nameHash) == _dataMapU32s.end())
+            return false;
+
+        val = entt::entity(_dataMapU32s[nameHash]);
+        return true;
+    }
+    inline bool HasEntity(u32 nameHash)
+    {
+        return HasU32(nameHash);
+    }
+    inline bool ClearEntity(u32 nameHash)
+    {
+        return ClearU32(nameHash);
+    }
 private:
     robin_hood::unordered_map<u32, u8> _dataMapU8s;
     robin_hood::unordered_map<u32, u16> _dataMapU16s;
