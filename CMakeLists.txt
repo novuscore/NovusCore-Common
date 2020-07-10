@@ -46,3 +46,7 @@ endif()
 if(NOT TARGET network)
     add_subdirectory(network-lib)
 endif()
+
+if (NOT TARGET shadercooker)
+    add_subdirectory(shadercooker-lib)
+endif()

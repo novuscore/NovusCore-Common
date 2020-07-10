@@ -63,3 +63,7 @@ endif()
 if(NOT TARGET stormlib)
     add_subdirectory(stormlib)
 endif()
+
+if(NOT TARGET shadercooker)
+    add_subdirectory(dxcompiler)
+endif()
