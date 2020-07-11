@@ -44,6 +44,5 @@ target_sources(${PROJECT_NAME} INTERFACE
 if (ENABLE_TRACY_PROFILER)
     target_compile_definitions(${PROJECT_NAME} INTERFACE
         TRACY_ENABLE
-        TRACY_NO_EXIT
     )
 endif()
