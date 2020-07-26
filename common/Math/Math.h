@@ -155,6 +155,16 @@ inline float Clamp(float x, float min, float max)
     return Max(Min(x, max), min);
 }
 
+inline int Clamp(int x, int min, int max)
+{
+    return Max(Min(x, max), min);
+}
+
+inline size_t Clamp(size_t x, size_t min, size_t max)
+{
+    return Max(Min(x, max), min);
+}
+
 inline float Lerp(float start, float end, float t)
 {
     return (start + t * (end - start));
