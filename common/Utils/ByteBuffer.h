@@ -226,6 +226,29 @@ public:
             val += _data[readData++];
         }
     }
+    inline void GetStringByOffset(std::string& val, size_t offset)
+    {
+        assert(_data != nullptr);
+        val.clear();
+        while (offset < size)
+        {
+            char c = _data[offset++];
+            if (c == 0)
+                break;
+
+            val += c;
+        }
+    }
+    inline void GetStringByOffset(std::string& val, i32 size, size_t offset)
+    {
+        assert(_data != nullptr);
+        val.clear();
+
+        for (i32 i = 0; i < size; i++)
+        {
+            val += _data[offset++];
+        }
+    }
 
     template <typename T>
     inline bool Put(T val)

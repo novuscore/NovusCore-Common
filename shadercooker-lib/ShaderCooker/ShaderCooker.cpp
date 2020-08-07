@@ -12,6 +12,80 @@ namespace fs = std::filesystem;
 
 namespace ShaderCooker
 {
+    class IncludeHandler : public IDxcIncludeHandler
+    {
+    public:
+        IncludeHandler(IDxcUtils* utils)
+            : _utils(utils)
+            , m_cRef(0)
+        {
+        }
+
+        void AddIncludeDirectory(const fs::path& path)
+        {
+            _includeDirectories.push_back(path);
+        }
+
+    private:
+        HRESULT STDMETHODCALLTYPE LoadSource(
+            _In_z_ LPCWSTR pFilename,                                 // Candidate filename.
+            _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
+        ) override
+        {
+            const fs::path filePath = pFilename;
+            for (const fs::path& includeDir : _includeDirectories)
+            {
+                const fs::path fullPath = includeDir / filePath;
+                if (fs::exists(fullPath))
+                {
+                    _utils->LoadFile(fullPath.wstring().c_str(), nullptr, (IDxcBlobEncoding**)ppIncludeSource);
+                    return S_OK;
+                }
+            }
+
+            *ppIncludeSource = nullptr;
+            return E_FAIL;
+        }
+
+        HRESULT QueryInterface(REFIID riid, LPVOID* ppvObj)
+        {
+            // Always set out parameter to NULL, validating it first.
+            if (!ppvObj)
+                return E_INVALIDARG;
+            *ppvObj = NULL;
+            if (riid == IID_IUnknown || riid == __uuidof(IDxcIncludeHandler))
+            {
+                // Increment the reference count and return the pointer.
+                *ppvObj = (LPVOID)this;
+                AddRef();
+                return NOERROR;
+            }
+            return E_NOINTERFACE;
+        }
+
+        ULONG AddRef()
+        {
+            InterlockedIncrement(&m_cRef);
+            return m_cRef;
+        }
+
+        ULONG Release()
+        {
+            // Decrement the object's internal counter.
+            ULONG ulRefCount = InterlockedDecrement(&m_cRef);
+            if (0 == m_cRef)
+            {
+                delete this;
+            }
+            return ulRefCount;
+        }
+
+        volatile ULONG m_cRef;
+
+        IDxcUtils* _utils;
+        std::vector<fs::path> _includeDirectories;
+    };
+
     ShaderCooker::ShaderCooker()
     {
         HRESULT r;
@@ -27,11 +101,18 @@ namespace ShaderCooker
         {
             NC_LOG_FATAL("Failed to create DXC Compiler");
         }
+
+        _includeHandler = new IncludeHandler(_utils.Get());
     }
 
     ShaderCooker::~ShaderCooker()
     {
 
+    }
+
+    void ShaderCooker::AddIncludeDir(std::filesystem::path path)
+    {
+        _includeHandler->AddIncludeDirectory(path);
     }
 
     void ShaderCooker::CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize)
@@ -66,14 +147,14 @@ namespace ShaderCooker
         {
             L"-spirv",          // Generate SPIR-V for Vulkan
             L"-fvk-use-gl-layout", // Set memory layout
-            L"-Zpr",			//Row-major matrices
-            L"-WX",				//Warnings as errors
+            L"-Zpr",            //Row-major matrices
+            L"-WX",             //Warnings as errors
     #ifdef _DEBUG
-            //L"-Zi",				//Debug info
-            //L"-Qembed_debug",	//Embed debug info into the shader
-            L"-Od",				//Disable optimization
+            //L"-Zi",               //Debug info
+            //L"-Qembed_debug", //Embed debug info into the shader
+            L"-Od",             //Disable optimization
     #else
-            L"-O3",				//Optimization level 3
+            L"-O3",             //Optimization level 3
     #endif
         };
 
@@ -88,7 +169,7 @@ namespace ShaderCooker
         }
 
         Microsoft::WRL::ComPtr<IDxcOperationResult> compileResult;
-        r = _compiler->Compile(sourceBlob.Get(), path.filename().c_str(), L"main", profile.c_str(), &args[0], sizeof(args) / sizeof(args[0]), defines.data(), static_cast<u32>(defines.size()), nullptr, compileResult.GetAddressOf());
+        r = _compiler->Compile(sourceBlob.Get(), path.filename().c_str(), L"main", profile.c_str(), &args[0], sizeof(args) / sizeof(args[0]), defines.data(), static_cast<u32>(defines.size()), _includeHandler, compileResult.GetAddressOf());
         if (r != S_OK)
         {
             NC_LOG_FATAL("Compiler would not even give us back a result");
@@ -109,7 +190,7 @@ namespace ShaderCooker
 
             NC_LOG_ERROR("%s\n", (const char*)printBlob->GetBufferPointer());
         }
-        
+
         IDxcBlob* resultBlob;
         compileResult->GetResult(&resultBlob);
 
@@ -123,10 +204,10 @@ namespace ShaderCooker
     {
         DxcDefine define;
         define.Name = new wchar_t[name.size()];
-        wmemcpy((wchar_t*)define.Name, name.c_str(), name.size()+1);
+        wmemcpy((wchar_t*)define.Name, name.c_str(), name.size() + 1);
 
         define.Value = new wchar_t[value.size()];
-        wmemcpy((wchar_t*)define.Value, value.c_str(), value.size()+1);
+        wmemcpy((wchar_t*)define.Value, value.c_str(), value.size() + 1);
 
         return define;
     }
@@ -143,7 +224,7 @@ namespace ShaderCooker
         return defines;
     }
 
-    constexpr char* validProfilesArray[9] = 
+    constexpr char* validProfilesArray[9] =
     {
         "ps", // Pixel Shader
         "vs", // Vertex Shader
@@ -175,7 +256,7 @@ namespace ShaderCooker
                 first = false;
             }
         }
-        
+
         // We expect filename to end with .XX.hlsl where XX is the profile of the shader, for example vs for vertex shader, ps for pixel shader, cs for compute etc
         // First we remove the .hlsl part of the name
         fs::path withoutHlsl = filename.replace_extension();

@@ -11,12 +11,15 @@
 
 namespace ShaderCooker
 {
+    class IncludeHandler;
+
     class ShaderCooker
     {
     public:
         ShaderCooker();
         ~ShaderCooker();
 
+        void AddIncludeDir(std::filesystem::path path);
         void CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize);
 
     private:
@@ -24,6 +27,8 @@ namespace ShaderCooker
         bool GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile);
 
     private:
+        IncludeHandler* _includeHandler;
+
         Microsoft::WRL::ComPtr<IDxcUtils> _utils;
         Microsoft::WRL::ComPtr<IDxcCompiler> _compiler;
     };
