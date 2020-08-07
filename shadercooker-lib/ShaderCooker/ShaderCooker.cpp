@@ -17,13 +17,30 @@ namespace ShaderCooker
     public:
         IncludeHandler(IDxcUtils* utils)
             : _utils(utils)
-            , m_cRef(0)
+            , m_cRef(1)
         {
         }
 
         void AddIncludeDirectory(const fs::path& path)
         {
             _includeDirectories.push_back(path);
+        }
+
+        ULONG AddRef()
+        {
+            InterlockedIncrement(&m_cRef);
+            return m_cRef;
+        }
+
+        ULONG Release()
+        {
+            // Decrement the object's internal counter.
+            ULONG ulRefCount = InterlockedDecrement(&m_cRef);
+            if (0 == m_cRef)
+            {
+                delete this;
+            }
+            return ulRefCount;
         }
 
     private:
@@ -63,23 +80,6 @@ namespace ShaderCooker
             return E_NOINTERFACE;
         }
 
-        ULONG AddRef()
-        {
-            InterlockedIncrement(&m_cRef);
-            return m_cRef;
-        }
-
-        ULONG Release()
-        {
-            // Decrement the object's internal counter.
-            ULONG ulRefCount = InterlockedDecrement(&m_cRef);
-            if (0 == m_cRef)
-            {
-                delete this;
-            }
-            return ulRefCount;
-        }
-
         volatile ULONG m_cRef;
 
         IDxcUtils* _utils;
@@ -107,7 +107,7 @@ namespace ShaderCooker
 
     ShaderCooker::~ShaderCooker()
     {
-
+        _includeHandler->Release();
     }
 
     void ShaderCooker::AddIncludeDir(std::filesystem::path path)
@@ -150,7 +150,7 @@ namespace ShaderCooker
             L"-Zpr",            //Row-major matrices
             L"-WX",             //Warnings as errors
     #ifdef _DEBUG
-            //L"-Zi",               //Debug info
+            L"-Zi",             //Debug info
             //L"-Qembed_debug", //Embed debug info into the shader
             L"-Od",             //Disable optimization
     #else
