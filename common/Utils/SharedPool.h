@@ -56,6 +56,21 @@ public:
         return std::move(tmp);
     }
 
+    template <typename... Args>
+    ptr_type acquireOrCreate(Args... args)
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (_pool.empty())
+        {
+            std::unique_ptr<T> newObject = std::make_unique<T>(args...);
+            _pool.push(std::move(newObject));
+        }
+        
+        ptr_type tmp(_pool.top().release(), PoolDeleter{ std::weak_ptr<SharedPool<T>*>{_thisPtr} });
+        _pool.pop();
+        return std::move(tmp);
+    }
+
     bool empty()
     {
         std::lock_guard<std::mutex> lock(_mutex);

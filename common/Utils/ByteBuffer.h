@@ -532,13 +532,7 @@ public:
 
         if constexpr (size <= 128)
         {
-            if (_byteBuffer128.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 128);
-                _byteBuffer128.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer128.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer128.acquireOrCreate(nullptr, 128);
             buffer->size = size;
             buffer->Reset();
 
@@ -546,13 +540,7 @@ public:
         }
         else if constexpr (size <= 512)
         {
-            if (_byteBuffer512.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 512);
-                _byteBuffer512.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer512.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer512.acquireOrCreate(nullptr, 512);
             buffer->size = size;
             buffer->Reset();
 
@@ -560,13 +548,7 @@ public:
         }
         else if constexpr (size <= 1024)
         {
-            if (_byteBuffer1024.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 1024);
-                _byteBuffer1024.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer1024.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer1024.acquireOrCreate(nullptr, 1024);
             buffer->size = size;
             buffer->Reset();
 
@@ -574,13 +556,7 @@ public:
         }
         else if constexpr (size <= 4096)
         {
-            if (_byteBuffer4096.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 4096);
-                _byteBuffer4096.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer4096.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer4096.acquireOrCreate(nullptr, 4096);
             buffer->size = size;
             buffer->Reset();
 
@@ -588,13 +564,7 @@ public:
         }
         else if constexpr (size <= 8192)
         {
-            if (_byteBuffer8192.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 8192);
-                _byteBuffer8192.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer8192.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer8192.acquireOrCreate(nullptr, 8192);
             buffer->size = size;
             buffer->Reset();
 
@@ -602,13 +572,7 @@ public:
         }
         else if constexpr (size <= 16384)
         {
-            if (_byteBuffer16384.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 16384);
-                _byteBuffer16384.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer16384.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer16384.acquireOrCreate(nullptr, 16384);
             buffer->size = size;
             buffer->Reset();
 
@@ -616,13 +580,7 @@ public:
         }
         else if constexpr (size <= 32768)
         {
-            if (_byteBuffer32768.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 32768);
-                _byteBuffer32768.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer32768.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer32768.acquireOrCreate(nullptr, 32768);
             buffer->size = size;
             buffer->Reset();
 
@@ -630,13 +588,7 @@ public:
         }
         else if constexpr (size <= 65536)
         {
-            if (_byteBuffer65536.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 65536);
-                _byteBuffer65536.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer65536.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer65536.acquireOrCreate(nullptr, 65536);
             buffer->size = size;
             buffer->Reset();
 
@@ -644,13 +596,7 @@ public:
         }
         else if constexpr (size <= 131072)
         {
-            if (_byteBuffer131072.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 131072);
-                _byteBuffer131072.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer131072.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer131072.acquireOrCreate(nullptr, 131072);
             buffer->size = size;
             buffer->Reset();
 
@@ -658,13 +604,7 @@ public:
         }
         else if constexpr (size <= 262144)
         {
-            if (_byteBuffer262144.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 262144);
-                _byteBuffer262144.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer262144.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer262144.acquireOrCreate(nullptr, 262144);
             buffer->size = size;
             buffer->Reset();
 
@@ -672,13 +612,7 @@ public:
         }
         else if constexpr (size <= 524288)
         {
-            if (_byteBuffer524288.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 524288);
-                _byteBuffer524288.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer524288.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer524288.acquireOrCreate(nullptr, 524288);
             buffer->size = size;
             buffer->Reset();
 
@@ -686,13 +620,7 @@ public:
         }
         else if constexpr (size <= 1048576)
         {
-            if (_byteBuffer1048576.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 1048576);
-                _byteBuffer1048576.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer1048576.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer1048576.acquireOrCreate(nullptr, 1048576);
             buffer->size = size;
             buffer->Reset();
 
@@ -700,13 +628,7 @@ public:
         }
         else if constexpr (size <= 209715200) // This is used for the Data Extractor, largest observed file in WOTLK is 65MB, however in BFA this has been observed to be 150MB
         {
-            if (_byteBuffer209715200.empty())
-            {
-                Bytebuffer* newDataStore = new Bytebuffer(nullptr, 209715200);
-                _byteBuffer209715200.add(std::unique_ptr<Bytebuffer>(newDataStore));
-            }
-
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer209715200.acquire();
+            std::shared_ptr<Bytebuffer> buffer = _byteBuffer209715200.acquireOrCreate(nullptr, 209715200);
             buffer->size = size;
             buffer->Reset();
 
