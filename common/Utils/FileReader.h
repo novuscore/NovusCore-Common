@@ -31,14 +31,14 @@ public:
             _fileStream.close();
     }
 
-    void Read(Bytebuffer& buffer, size_t length)
+    void Read(Bytebuffer* buffer, size_t length)
     {
         // Soft check to ensure we don't try to read from empty file
         if (_length == 0)
             return;
 
-        _fileStream.read(reinterpret_cast<char*>(buffer.GetDataPointer()), length);
-        buffer.writtenData += length;
+        _fileStream.read(reinterpret_cast<char*>(buffer->GetDataPointer()), length);
+        buffer->writtenData += length;
     }
 
     std::string Path() { return _path; }
