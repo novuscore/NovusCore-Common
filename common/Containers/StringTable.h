@@ -41,6 +41,8 @@ public:
 
     void CopyFrom(StringTable& other);
 
+    void Clear();
+
 private:
     bool TryFindHashedString(u32 hash, u32& index);
 

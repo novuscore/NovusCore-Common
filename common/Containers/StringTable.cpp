@@ -109,3 +109,11 @@ bool StringTable::TryFindHashedString(u32 hash, u32& index)
 
     return false;
 }
+
+void StringTable::Clear()
+{
+    std::unique_lock ourLock(_mutex);
+
+    _strings.clear();
+    _hashes.clear();
+}
