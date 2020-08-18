@@ -69,8 +69,8 @@ struct AutoCVar_Float
 
     float Get();
     void Set(float val);
-
-    CVarParameter* cvar;
+private:
+    int index;
 };
 
 struct AutoCVar_Int
@@ -80,13 +80,14 @@ struct AutoCVar_Int
     void Set(int val);
     
     void Toggle();
-
-    CVarParameter* cvar;
+private:
+    int index;
 };
 
 struct AutoCVar_String
 {
     AutoCVar_String(const char* name, const char* description, const char * defaultValue);
-
-    CVarParameter* cvar;
+   
+private:
+    int index;
 };

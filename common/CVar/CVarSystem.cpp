@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include "Utils/StringUtils.h"
 
-#include <iostream>
+#include <array>
 #include "Utils/DebugHandler.h"
 
 enum class CVarType : u8 
@@ -37,28 +37,23 @@ enum class CVarType : u8
 };
 
 class CVarParameter {
-    friend class CVarSystemImpl;
 public:
-    //getters, returns null if type doesnt match
-    float* AsFloat();
-    int* AsInt();
-    const char* AsString();
+    friend class CVarSystemImpl;
 
-    //setters. If the type does not match, they will do nothing
-    void SetFloat(float f);
-    void SetInt(int i);
-    void SetString(const char* str);
-
-private:
-    //just the types instead of a union for simplicity
-    std::string stringParam;
-    float floatParam;
-    int intParam;
+    int arrayIndex;
 
     CVarType type;
 
     std::string name;
     std::string description;
+};
+
+template<typename T>
+struct CVarStorage
+{
+    T initial;
+    T current;
+    CVarParameter* parameter;
 };
 
 class CVarSystemImpl : public CVarSystem 
@@ -89,6 +84,18 @@ public:
     void SetStringCVar(const char* name, const char* value) override final;
     void SetStringCVar(u32 namehash, const char* value) override final;
 
+    constexpr static int max_int_cvars = 1000;
+    std::array<CVarStorage<int>, max_int_cvars> intCVars;
+    int lastIntCVar = 0;
+
+    constexpr static int max_float_cvars = 1000;
+    std::array<CVarStorage<float>, max_float_cvars> floatCVars;
+    int lastFloatCVar = 0;
+
+    constexpr static int max_string_cvars = 200;
+    std::array<CVarStorage<std::string>, max_string_cvars> stringCVars;
+    int lastStringCVar = 0;
+
 private:
 
     CVarParameter* InitCVar(const char* name, const char* description);
@@ -115,88 +122,23 @@ const char* CVarSystemImpl::GetStringCVar(const char* name)
 float* CVarSystemImpl::GetFloatCVar(u32 namehash)
 {
     auto par = GetCVar(namehash);
-    return par->AsFloat();
+    return &floatCVars[par->arrayIndex].current;
 }
 int* CVarSystemImpl::GetIntCVar(u32 namehash)
 {
     auto par = GetCVar(namehash);
-    return par->AsInt();
+    return &intCVars[par->arrayIndex].current;
 }
 const char* CVarSystemImpl::GetStringCVar(u32 namehash)
 {
     auto par = GetCVar(namehash);
-    return par->AsString();
+    return stringCVars[par->arrayIndex].current.c_str();
 }
 
 CVarSystem* CVarSystem::Get()
 {
     static CVarSystemImpl cvarSys{};
     return &cvarSys;
-}
-
-float* CVarParameter::AsFloat()
-{
-    if (type == CVarType::FLOAT)
-    {
-        return &floatParam;
-    }
-    else {
-        return nullptr;
-    }
-}
-
-
-int* CVarParameter::AsInt()
-{
-    if (type == CVarType::INT)
-    {
-        return &intParam;
-    }
-    else {
-        return nullptr;
-    }
-}
-
-const char* CVarParameter::AsString()
-{
-    if (type == CVarType::STRING)
-    {
-        return stringParam.c_str();
-    }
-    else {
-        return nullptr;
-    }
-}
-
-
-void CVarParameter::SetFloat(float f)
-{
-    if (type == CVarType::FLOAT)
-    {
-        floatParam = f;
-    }
-}
-
-void CVarParameter::SetInt(int i)
-{
-    if (type == CVarType::INT)
-    {
-        if (intParam != i)
-        {
-            intParam = i;
-            NC_LOG_MESSAGE("[CVAR] Changing CVAR: %s = %i",name.c_str(), i);
-        }
-       
-    }
-}
-
-
-void CVarParameter::SetString(const char* str)
-{
-    if (type == CVarType::STRING)
-    {
-        stringParam = str;
-    }
 }
 
 CVarParameter* CVarSystemImpl::GetCVar(const char* name)
@@ -226,7 +168,7 @@ void CVarSystemImpl::SetFloatCVar(const char* name, float value)
 }
 void CVarSystemImpl::SetFloatCVar(u32 namehash, float value)
 {
-    GetCVar(namehash)->SetFloat(value);
+    floatCVars[GetCVar(namehash)->arrayIndex].current = value;
 }
 
 void CVarSystemImpl::SetIntCVar(const char* name, int value)
@@ -237,7 +179,8 @@ void CVarSystemImpl::SetIntCVar(const char* name, int value)
 
 void CVarSystemImpl::SetIntCVar(u32 namehash, int value)
 {
-    GetCVar(namehash)->SetInt(value);
+    intCVars[GetCVar(namehash)->arrayIndex].current = value;
+
 }
 
 void CVarSystemImpl::SetStringCVar(const char* name, const char* value)
@@ -248,7 +191,7 @@ void CVarSystemImpl::SetStringCVar(const char* name, const char* value)
 
 void CVarSystemImpl::SetStringCVar(u32 namehash, const char* value)
 {
-    GetCVar(namehash)->SetString(value);
+    stringCVars[GetCVar(namehash)->arrayIndex].current = value;
 }
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, float defaultValue)
 {
@@ -256,7 +199,14 @@ CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* des
     if (!param) return nullptr;
 
     param->type = CVarType::FLOAT;
-    param->SetFloat(defaultValue);
+    //param->SetFloat(defaultValue);
+
+    floatCVars[lastFloatCVar].parameter = param;
+    floatCVars[lastFloatCVar].initial = defaultValue;
+    floatCVars[lastFloatCVar].current = defaultValue;
+
+    param->arrayIndex = lastFloatCVar;
+    lastFloatCVar++;
 
     return param;
 }
@@ -267,7 +217,13 @@ CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* descr
     if (!param) return nullptr;
 
     param->type = CVarType::INT;
-    param->SetInt(defaultValue);
+
+    intCVars[lastIntCVar].parameter = param;
+    intCVars[lastIntCVar].initial = defaultValue;
+    intCVars[lastIntCVar].current = defaultValue;
+
+    param->arrayIndex = lastIntCVar;
+    lastIntCVar++;
 
     return param;
 }
@@ -278,7 +234,13 @@ CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* de
     if (!param) return nullptr;
 
     param->type = CVarType::STRING;
-    param->SetString(defaultValue);
+
+    stringCVars[lastStringCVar].parameter = param;
+    stringCVars[lastStringCVar].initial = defaultValue;
+    stringCVars[lastStringCVar].current = defaultValue;
+
+    param->arrayIndex = lastStringCVar;
+    lastStringCVar++;
 
     return param;
 }
@@ -299,34 +261,36 @@ CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* descriptio
 
 AutoCVar_Float::AutoCVar_Float(const char* name, const char* description, float defaultValue)
 {
-    cvar= CVarSystem::Get()->CreateFloatCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateFloatCVar(name, description, defaultValue);
+    index = cvar->arrayIndex;
 }
 
 
 float AutoCVar_Float::Get()
 {
-    return *cvar->AsFloat();
+    return static_cast<CVarSystemImpl*>( CVarSystem::Get())->floatCVars[index].current;
 }
 
 
 void AutoCVar_Float::Set(float f)
 {
-    cvar->SetFloat(f);
+    static_cast<CVarSystemImpl*>(CVarSystem::Get())->floatCVars[index].current = f;
 }
 
 AutoCVar_Int::AutoCVar_Int(const char* name, const char* description, int defaultValue)
 {
-    cvar = CVarSystem::Get()->CreateIntCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateIntCVar(name, description, defaultValue);
+    index = cvar->arrayIndex;
 }
 
 int AutoCVar_Int::Get()
 {
-    return *cvar->AsInt();
+    return static_cast<CVarSystemImpl*>(CVarSystem::Get())->intCVars[index].current;
 }
 
 void AutoCVar_Int::Set(int val)
 {
-    cvar->SetInt(val);
+    static_cast<CVarSystemImpl*>(CVarSystem::Get())->intCVars[index].current = val;
 }
 
 
@@ -339,5 +303,6 @@ void AutoCVar_Int::Toggle()
 
 AutoCVar_String::AutoCVar_String(const char* name, const char* description, const char* defaultValue)
 {
-    cvar = CVarSystem::Get()->CreateStringCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateStringCVar(name, description, defaultValue);
+    index = cvar->arrayIndex;
 }
