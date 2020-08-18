@@ -1,7 +1,7 @@
 /*
 # MIT License
 
-# Copyright(c) 2018-2019 NovusCore
+# Copyright(c) 2018-2020 NovusCore
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files(the "Software"), to deal
@@ -29,13 +29,8 @@
 #include <iostream>
 #include "Utils/DebugHandler.h"
 
-// FNV-1a 32bit hashing algorithm.
-constexpr u32 fnv1a_32(char const* s, std::size_t count)
+enum class CVarType : u8 
 {
-    return ((count ? fnv1a_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
-}
-
-enum class CVarType : u8 {
     INT,
     FLOAT,
     STRING
@@ -66,7 +61,8 @@ private:
     std::string description;
 };
 
-class CVarSystemImpl : public CVarSystem {
+class CVarSystemImpl : public CVarSystem 
+{
 public:
     CVarParameter* GetCVar(const char* name) override final;
     CVarParameter* GetCVar(u32 namehash) override final;
@@ -102,17 +98,17 @@ private:
 
 float* CVarSystemImpl::GetFloatCVar(const char* name) 
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     return GetFloatCVar(namehash);
 }
 int* CVarSystemImpl::GetIntCVar(const char* name)
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     return GetIntCVar(namehash);
 }
 const char* CVarSystemImpl::GetStringCVar(const char* name)
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     return GetStringCVar(namehash);
 }
 
@@ -205,7 +201,7 @@ void CVarParameter::SetString(const char* str)
 
 CVarParameter* CVarSystemImpl::GetCVar(const char* name)
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     return GetCVar(namehash);
 }
 
@@ -225,7 +221,7 @@ CVarParameter* CVarSystemImpl::GetCVar(u32 namehash)
 
 void CVarSystemImpl::SetFloatCVar(const char* name, float value)
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     SetFloatCVar(namehash, value);
 }
 void CVarSystemImpl::SetFloatCVar(u32 namehash, float value)
@@ -235,7 +231,7 @@ void CVarSystemImpl::SetFloatCVar(u32 namehash, float value)
 
 void CVarSystemImpl::SetIntCVar(const char* name, int value)
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     SetIntCVar(namehash, value);
 }
 
@@ -246,7 +242,7 @@ void CVarSystemImpl::SetIntCVar(u32 namehash, int value)
 
 void CVarSystemImpl::SetStringCVar(const char* name, const char* value)
 {
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     SetStringCVar(namehash, value);
 }
 
@@ -290,7 +286,7 @@ CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* de
 CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* description)
 {
     if (GetCVar(name)) return nullptr; //return null if the cvar already exists
-    u32 namehash = fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
     savedCVars[namehash] = CVarParameter{};
 
     CVarParameter& newParam = savedCVars[namehash];
