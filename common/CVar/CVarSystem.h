@@ -26,7 +26,8 @@
 
 class CVarParameter;
 
-class CVarSystem {
+class CVarSystem
+{
 
 public:
     static CVarSystem* Get();
@@ -62,7 +63,8 @@ public:
     virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char * defaultValue) = 0;
 };
 
-struct AutoCVar_Float {
+struct AutoCVar_Float
+{
     AutoCVar_Float(const char* name, const char* description, float defaultValue);
 
     float Get();
@@ -71,7 +73,8 @@ struct AutoCVar_Float {
     CVarParameter* cvar;
 };
 
-struct AutoCVar_Int {
+struct AutoCVar_Int
+{
     AutoCVar_Int(const char* name, const char* description, int defaultValue);
     int Get();
     void Set(int val);
@@ -81,7 +84,8 @@ struct AutoCVar_Int {
     CVarParameter* cvar;
 };
 
-struct AutoCVar_String {
+struct AutoCVar_String
+{
     AutoCVar_String(const char* name, const char* description, const char * defaultValue);
 
     CVarParameter* cvar;
