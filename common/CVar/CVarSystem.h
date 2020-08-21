@@ -100,6 +100,9 @@ struct AutoCVar_String
 {
     AutoCVar_String(const char* name, const char* description, const char * defaultValue, CVarFlags flags = CVarFlags::None);
    
+    const char* Get();
+    void Set(std::string && val);
+
 private:
     int index;
 };

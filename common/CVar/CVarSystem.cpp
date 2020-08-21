@@ -493,3 +493,13 @@ AutoCVar_String::AutoCVar_String(const char* name, const char* description, cons
     cvar->flags = flags;
     index = cvar->arrayIndex;
 }
+
+const char* AutoCVar_String::Get()
+{
+    return static_cast<CVarSystemImpl*>(CVarSystem::Get())->stringCVars[index].current.c_str();
+};
+
+void AutoCVar_String::Set(std::string&& val)
+{
+    static_cast<CVarSystemImpl*>(CVarSystem::Get())->stringCVars[index].current = val;
+}
