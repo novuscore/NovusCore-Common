@@ -26,6 +26,16 @@
 
 class CVarParameter;
 
+enum class CVarFlags : uint32_t {
+    None = 0,
+    Noedit = 1 << 1,
+    EditReadOnly = 1 << 2,
+    Advanced = 1 << 3,
+
+    EditCheckbox = 1 << 8,
+    EditFloatDrag = 1 << 9,
+};
+
 class CVarSystem
 {
 
@@ -61,11 +71,13 @@ public:
     virtual CVarParameter* CreateFloatCVar(const char* name, const char* description,float defaultValue) = 0;
     virtual CVarParameter* CreateIntCVar(const char* name, const char* description, int defaultValue) = 0;
     virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char * defaultValue) = 0;
+
+    virtual void DrawImguiEditor() = 0;
 };
 
 struct AutoCVar_Float
 {
-    AutoCVar_Float(const char* name, const char* description, float defaultValue);
+    AutoCVar_Float(const char* name, const char* description, float defaultValue, CVarFlags flags = CVarFlags::None);
 
     float Get();
     void Set(float val);
@@ -75,7 +87,7 @@ private:
 
 struct AutoCVar_Int
 {
-    AutoCVar_Int(const char* name, const char* description, int defaultValue);
+    AutoCVar_Int(const char* name, const char* description, int defaultValue, CVarFlags flags = CVarFlags::None);
     int Get();
     void Set(int val);
     
@@ -86,7 +98,7 @@ private:
 
 struct AutoCVar_String
 {
-    AutoCVar_String(const char* name, const char* description, const char * defaultValue);
+    AutoCVar_String(const char* name, const char* description, const char * defaultValue, CVarFlags flags = CVarFlags::None);
    
 private:
     int index;
