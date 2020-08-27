@@ -36,7 +36,9 @@ enum class CVarType : u8
 {
     INT,
     FLOAT,
-    STRING
+    STRING,
+    FLOATVEC,
+    INTVEC
 };
 
 class CVarParameter
@@ -60,6 +62,48 @@ struct CVarStorage
     CVarParameter* parameter;
 };
 
+template<typename T>
+struct CVarArray {
+    std::vector<CVarStorage<T>> cvars;
+    int lastCVar{0};
+
+    CVarArray(size_t size){
+        cvars.resize(size);
+    }
+
+    T* GetCurrentPtr(int index)
+    {
+       return &((cvars.data() + index)->current);
+    };
+
+    T GetCurrent(int index)
+    {
+        return cvars[index].current;
+    };
+
+    void SetCurrent(const T& val, int index)
+    {
+        cvars[index].current = val;
+    }
+
+    int Add(const T& value, CVarParameter* param) {
+        int index = lastCVar;
+
+        cvars[index].current = value;
+        cvars[index].initial = value;
+        cvars[index].parameter = param;
+
+        param->arrayIndex = index;
+        lastCVar++;
+
+        return index;
+    }
+};
+
+u32 Hash(const char* str) {
+    return StringUtils::fnv1a_32(str, strlen(str));
+}
+
 class CVarSystemImpl : public CVarSystem 
 {
 public:
@@ -69,14 +113,20 @@ public:
     CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue) override final;
     CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue) override final;
     CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue) override final;
+    CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const  vec4& defaultValue)override final;
+    CVarParameter* CreateVecIntCVar(const char* name, const char* description, const  ivec4& defaultValue)override final;
 
     f64* GetFloatCVar(const char* name) override final;
     i32* GetIntCVar(const char* name) override final;
     const char* GetStringCVar(const char* name) override final;
+    vec4* GetVecFloatCVar(const char* name) override final;
+    ivec4* GetVecIntCVar(const char* name) override final;
 
     f64* GetFloatCVar(u32 namehash) override final; 
     i32* GetIntCVar(u32 namehash) override final;
     const char* GetStringCVar(u32 namehash) override final;
+    vec4* GetVecFloatCVar(u32 namehash) override final;
+    ivec4* GetVecIntCVar(u32 namehash) override final;
 
     void SetFloatCVar(const char* name, f64 value) override final;
     void SetFloatCVar(u32 namehash, f64 value) override final;
@@ -87,21 +137,93 @@ public:
     void SetStringCVar(const char* name, const char* value) override final;
     void SetStringCVar(u32 namehash, const char* value) override final;
 
+    void SetVecFloatCVar(const char* name, const vec4& value) override final;
+    void SetVecFloatCVar(u32 namehash, const vec4& value) override final;
+
+    void SetVecIntCVar(const char* name, const  ivec4& value) override final;
+    void SetVecIntCVar(u32 namehash, const ivec4& value) override final;
+
     void DrawImguiEditor() override final;
 
     void EditParameter(CVarParameter* p);
 
     constexpr static int MAX_INT_CVARS = 1000;
-    std::array<CVarStorage<i32>, MAX_INT_CVARS> intCVars;
-    int lastIntCVar = 0;
+
+    CVarArray<i32> intCVars2{ MAX_INT_CVARS };
 
     constexpr static int MAX_FLOAT_CVARS = 1000;
-    std::array<CVarStorage<f64>, MAX_FLOAT_CVARS> floatCVars;
-    int lastFloatCVar = 0;
+    CVarArray<f64> floatCVars{ MAX_FLOAT_CVARS };
 
     constexpr static int MAX_STRING_CVARS = 200;
-    std::array<CVarStorage<std::string>, MAX_STRING_CVARS> stringCVars;
-    int lastStringCVar = 0;
+    CVarArray<std::string> stringCVars{ MAX_STRING_CVARS };
+
+    constexpr static int MAX_FLOATVEC_CVARS = 400;
+    CVarArray<vec4> fvecCVars{ MAX_FLOATVEC_CVARS };
+
+    constexpr static int MAX_INTVEC_CVARS = 400;
+    CVarArray<ivec4> ivecCVars{ MAX_INTVEC_CVARS };
+
+    //using templates with specializations to get the cvar arrays for each type.
+    //if you try to use a type that doesnt have specialization, it will trigger the static assert
+    template<typename T>
+    CVarArray<T>* GetCVarArray()
+    {
+        static_assert(false);
+        return nullptr;
+    }
+
+    template<>
+    CVarArray<i32>* GetCVarArray()
+    {
+        return &intCVars2;
+    }
+    template<>
+    CVarArray<f64>* GetCVarArray()
+    {
+        return &floatCVars;
+    }
+    template<>
+    CVarArray<std::string>* GetCVarArray()
+    {
+        return &stringCVars;
+    }
+    template<>
+    CVarArray<vec4>* GetCVarArray()
+    {
+        return &fvecCVars;
+    }
+    template<>
+    CVarArray<ivec4>* GetCVarArray()
+    {
+        return &ivecCVars;
+    }
+
+    //templated get-set cvar versions for syntax sugar
+    template<typename T>
+    T* GetCVarCurrent(u32 namehash) {
+        auto par = GetCVar(namehash);
+        return GetCVarArray<T>()->GetCurrentPtr(par->arrayIndex);
+    }
+
+    template<typename T>
+    T* GetCVarCurrent(const char* name)
+    {
+        return GetCVarCurrent<T>(Hash(name));
+    }
+    template<typename T>
+    void SetCVarCurrent(u32 namehash, const T& value)
+    {
+        GetCVarArray<T>()->SetCurrent(value, GetCVar(namehash)->arrayIndex);
+    }
+    template<typename T>
+    void SetCVarCurrent(const char* name, const T& value)
+    {
+        SetCVarCurrent(Hash(name), value);
+    }   
+
+    static CVarSystemImpl* Get() {
+        return static_cast<CVarSystemImpl*>(CVarSystem::Get());
+    }
 
 private:
 
@@ -114,34 +236,50 @@ private:
 
 f64* CVarSystemImpl::GetFloatCVar(const char* name) 
 {
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    return GetFloatCVar(namehash);
+    return GetCVarCurrent<f64>(name);
 }
 int* CVarSystemImpl::GetIntCVar(const char* name)
 {
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    return GetIntCVar(namehash);
+    return GetCVarCurrent<i32>(name);
 }
 const char* CVarSystemImpl::GetStringCVar(const char* name)
 {
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    return GetStringCVar(namehash);
+    return GetStringCVar(Hash(name));
+}
+
+vec4* CVarSystemImpl::GetVecFloatCVar(const char* name)
+{
+    return GetCVarCurrent<vec4>(name);
+}
+
+ivec4* CVarSystemImpl::GetVecIntCVar(const char* name)
+{
+    return GetCVarCurrent<ivec4>(name);
 }
 
 f64* CVarSystemImpl::GetFloatCVar(u32 namehash)
 {
-    auto par = GetCVar(namehash);
-    return &floatCVars[par->arrayIndex].current;
+    return GetCVarCurrent<f64>(namehash);
 }
+
 i32* CVarSystemImpl::GetIntCVar(u32 namehash)
 {
-    auto par = GetCVar(namehash);
-    return &intCVars[par->arrayIndex].current;
+    return GetCVarCurrent<i32>(namehash);
 }
+
 const char* CVarSystemImpl::GetStringCVar(u32 namehash)
 {
-    auto par = GetCVar(namehash);
-    return stringCVars[par->arrayIndex].current.c_str();
+    return GetCVarCurrent<std::string>(namehash)->c_str();
+}
+
+vec4* CVarSystemImpl::GetVecFloatCVar(u32 namehash)
+{
+    return GetCVarCurrent<vec4>(namehash);
+}
+
+ivec4* CVarSystemImpl::GetVecIntCVar(u32 namehash)
+{
+    return GetCVarCurrent<ivec4>(namehash);
 }
 
 CVarSystem* CVarSystem::Get()
@@ -170,210 +308,51 @@ CVarParameter* CVarSystemImpl::GetCVar(u32 namehash)
 
 void CVarSystemImpl::SetFloatCVar(const char* name, f64 value)
 {
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    SetFloatCVar(namehash, value);
+    SetCVarCurrent<f64>(name, value);
 }
 void CVarSystemImpl::SetFloatCVar(u32 namehash, f64 value)
 {
-    floatCVars[GetCVar(namehash)->arrayIndex].current = value;
+    SetCVarCurrent<f64>(namehash, value);
 }
 
 void CVarSystemImpl::SetIntCVar(const char* name, i32 value)
 {
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    SetIntCVar(namehash, value);
+    SetCVarCurrent<i32>(name, value);
 }
 
 void CVarSystemImpl::SetIntCVar(u32 namehash, i32 value)
 {
-    intCVars[GetCVar(namehash)->arrayIndex].current = value;
+    SetCVarCurrent<i32>(namehash, value);
 }
 
 void CVarSystemImpl::SetStringCVar(const char* name, const char* value)
 {
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    SetStringCVar(namehash, value);
+    SetCVarCurrent<std::string>(name, value);
 }
 
 void CVarSystemImpl::SetStringCVar(u32 namehash, const char* value)
 {
-    stringCVars[GetCVar(namehash)->arrayIndex].current = value;
+    SetCVarCurrent<std::string>(namehash, value);
 }
 
-void CVarSystemImpl::DrawImguiEditor()
+void CVarSystemImpl::SetVecFloatCVar(u32 namehash, const vec4& value)
 {
-    static std::string searchText = "";
-
-    ImGui::InputText("Filter",&searchText);
-    static bool bShowAdvanced = false;
-    ImGui::Checkbox("Advanced", &bShowAdvanced);
-
-    cachedEditParameters.clear();
-
-    auto addToEditList = [&](auto parameter)
-    {
-        bool bHidden = ((u32)parameter->flags & (u32)CVarFlags::Noedit);
-        bool bIsAdvanced = ((u32)parameter->flags & (u32)CVarFlags::Advanced);
-
-        if (!bHidden)
-        {
-            if (!(!bShowAdvanced && bIsAdvanced) &&  parameter->name.find(searchText) != std::string::npos)
-            {
-                cachedEditParameters.push_back(parameter);
-            };
-        }
-    };
-
-    for (int i = 0; i < lastIntCVar; i++)
-    {
-        addToEditList(intCVars[i].parameter);
-    }
-    for (int i = 0; i < lastFloatCVar; i++)
-    {
-        addToEditList(floatCVars[i].parameter);
-    }
-    for (int i = 0; i < lastStringCVar; i++)
-    {
-        addToEditList(stringCVars[i].parameter);
-    }
-    
-    if (cachedEditParameters.size() > 10)
-    {
-        std::unordered_map<std::string, std::vector<CVarParameter*>> categorizedParams;
-
-        //insert all the edit parameters into the hashmap by category
-        for (auto p : cachedEditParameters)
-        {
-            int dotPos = -1;
-            //find where the first dot is to categorize
-            for (int i = 0; i < p->name.length();i++)
-            {
-                if (p->name[i] == '.')
-                {
-                    dotPos = i;
-                    break;
-                }
-            }
-            std::string category = "";
-            if (dotPos != -1)
-            {
-                category = p->name.substr(0, dotPos);
-            }           
-
-            auto it = categorizedParams.find(category);
-            if (it == categorizedParams.end())
-            {
-                categorizedParams[category] = std::vector<CVarParameter*>();
-            }
-            it->second.push_back(p);
-        }
-
-        for (auto [category, parameters] : categorizedParams)
-        {
-            //alphabetical sort
-            std::sort(parameters.begin(), parameters.end(), [](CVarParameter* A, CVarParameter* B)
-            {
-                return A->name < B->name;
-            });
-
-            if (ImGui::BeginMenu(category.c_str()))
-            {
-                for (auto p : parameters)
-                {
-                    EditParameter(p);
-                }
-
-                ImGui::EndMenu();
-            }
-        }
-    }
-    else
-    {
-        //alphabetical sort
-        std::sort(cachedEditParameters.begin(), cachedEditParameters.end(), [](CVarParameter* A, CVarParameter* B)
-        {
-            return A->name < B->name;
-        });
-
-        for (auto p : cachedEditParameters) {
-            EditParameter(p);
-        }
-    }
+    SetCVarCurrent<vec4>(namehash, value);
 }
 
-void CVarSystemImpl::EditParameter(CVarParameter* p)
+void CVarSystemImpl::SetVecFloatCVar(const char* name, const vec4& value)
 {
-    const bool readonlyFlag = ((u32)p->flags & (u32)CVarFlags::EditReadOnly);
-    const bool checkboxFlag = ((u32)p->flags & (u32)CVarFlags::EditCheckbox);
-    const bool dragFlag = ((u32)p->flags & (u32)CVarFlags::EditFloatDrag);
+    SetCVarCurrent<vec4>(name, value);
+}
 
-    switch (p->type)
-    {
-    case CVarType::INT:
+void CVarSystemImpl::SetVecIntCVar(u32 namehash, const ivec4& value)
+{
+    SetCVarCurrent<ivec4>(namehash, value);
+}
 
-        if (readonlyFlag)
-        {
-            std::string displayFormat = p->name + "= %i";
-            ImGui::Text(displayFormat.c_str(), intCVars[p->arrayIndex].current);
-        }
-        else
-        {
-            if (checkboxFlag)
-            {
-                bool bCheckbox = intCVars[p->arrayIndex].current != 0;
-                ImGui::Checkbox(p->name.c_str(), &bCheckbox);
-
-                intCVars[p->arrayIndex].current = bCheckbox ? 1 : 0;
-            }
-            else
-            {
-                ImGui::InputInt(p->name.c_str(), &intCVars[p->arrayIndex].current);
-            }
-        }
-    break;
-
-    case CVarType::FLOAT:
-
-        if (readonlyFlag)
-        {
-            std::string displayFormat = p->name + "= %f";
-            ImGui::Text(displayFormat.c_str(), floatCVars[p->arrayIndex].current);
-        }
-        else
-        {
-            if (dragFlag)
-            {
-                ImGui::InputDouble(p->name.c_str(), &floatCVars[p->arrayIndex].current);
-
-            }
-            else
-            {
-                ImGui::InputDouble(p->name.c_str(), &floatCVars[p->arrayIndex].current);
-            }
-        }
-    break;
-
-    case CVarType::STRING:
-
-        if (readonlyFlag)
-        {
-            std::string displayFormat = p->name + "= %s";
-            ImGui::Text(displayFormat.c_str(), stringCVars[p->arrayIndex].current);
-        }
-        else
-        {
-            ImGui::InputText(p->name.c_str(), &stringCVars[p->arrayIndex].current);
-        }
-    break;
-
-    default:
-        break;
-    }
-
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip(p->description.c_str());
-    }
+void CVarSystemImpl::SetVecIntCVar(const char* name, const ivec4& value)
+{
+    SetCVarCurrent<ivec4>(name, value);
 }
 
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, f64 defaultValue)
@@ -383,12 +362,7 @@ CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* des
 
     param->type = CVarType::FLOAT;
 
-    floatCVars[lastFloatCVar].parameter = param;
-    floatCVars[lastFloatCVar].initial = defaultValue;
-    floatCVars[lastFloatCVar].current = defaultValue;
-
-    param->arrayIndex = lastFloatCVar;
-    lastFloatCVar++;
+    GetCVarArray<f64>()->Add(defaultValue, param);
 
     return param;
 }
@@ -400,12 +374,7 @@ CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* descr
 
     param->type = CVarType::INT;
 
-    intCVars[lastIntCVar].parameter = param;
-    intCVars[lastIntCVar].initial = defaultValue;
-    intCVars[lastIntCVar].current = defaultValue;
-
-    param->arrayIndex = lastIntCVar;
-    lastIntCVar++;
+    GetCVarArray<i32>()->Add(defaultValue, param);
 
     return param;
 }
@@ -417,12 +386,31 @@ CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* de
 
     param->type = CVarType::STRING;
 
-    stringCVars[lastStringCVar].parameter = param;
-    stringCVars[lastStringCVar].initial = defaultValue;
-    stringCVars[lastStringCVar].current = defaultValue;
+    GetCVarArray<std::string>()->Add(defaultValue, param);
 
-    param->arrayIndex = lastStringCVar;
-    lastStringCVar++;
+    return param;
+}
+
+CVarParameter* CVarSystemImpl::CreateVecFloatCVar(const char* name, const char* description, const  vec4& defaultValue)
+{
+    CVarParameter* param = InitCVar(name, description);
+    if (!param) return nullptr;
+
+    param->type = CVarType::FLOATVEC;
+
+    GetCVarArray<vec4>()->Add(defaultValue, param);
+
+    return param;
+}
+
+CVarParameter* CVarSystemImpl::CreateVecIntCVar(const char* name, const char* description, const  ivec4& defaultValue)
+{
+    CVarParameter* param = InitCVar(name, description);
+    if (!param) return nullptr;
+
+    param->type = CVarType::INTVEC;
+
+    GetCVarArray<ivec4>()->Add(defaultValue, param);
 
     return param;
 }
@@ -450,7 +438,7 @@ AutoCVar_Float::AutoCVar_Float(const char* name, const char* description, f64 de
 
 f64 AutoCVar_Float::Get()
 {
-    return static_cast<CVarSystemImpl*>( CVarSystem::Get())->floatCVars[index].current;
+    return CVarSystemImpl::Get()->GetCVarArray<f64>()->GetCurrent(index);
 }
 
 f32 AutoCVar_Float::GetFloat()
@@ -460,7 +448,7 @@ f32 AutoCVar_Float::GetFloat()
 
 void AutoCVar_Float::Set(f64 f)
 {
-    static_cast<CVarSystemImpl*>(CVarSystem::Get())->floatCVars[index].current = f;
+    CVarSystemImpl::Get()->GetCVarArray<f64>()->SetCurrent(f, index);
 }
 
 AutoCVar_Int::AutoCVar_Int(const char* name, const char* description, i32 defaultValue, CVarFlags flags)
@@ -472,12 +460,12 @@ AutoCVar_Int::AutoCVar_Int(const char* name, const char* description, i32 defaul
 
 i32 AutoCVar_Int::Get()
 {
-    return static_cast<CVarSystemImpl*>(CVarSystem::Get())->intCVars[index].current;
+    return CVarSystemImpl::Get()->GetCVarArray<i32>()->GetCurrent(index);
 }
 
 void AutoCVar_Int::Set(i32 val)
 {
-    static_cast<CVarSystemImpl*>(CVarSystem::Get())->intCVars[index].current = val;
+    CVarSystemImpl::Get()->GetCVarArray<i32>()->SetCurrent(val, index);
 }
 
 void AutoCVar_Int::Toggle()
@@ -496,10 +484,240 @@ AutoCVar_String::AutoCVar_String(const char* name, const char* description, cons
 
 const char* AutoCVar_String::Get()
 {
-    return static_cast<CVarSystemImpl*>(CVarSystem::Get())->stringCVars[index].current.c_str();
+    return CVarSystemImpl::Get()->GetCVarArray<std::string>()->GetCurrentPtr(index)->c_str();
 };
 
 void AutoCVar_String::Set(std::string&& val)
 {
-    static_cast<CVarSystemImpl*>(CVarSystem::Get())->stringCVars[index].current = val;
+    CVarSystemImpl::Get()->GetCVarArray<std::string>()->SetCurrent(val, index);
+}
+
+AutoCVar_VecFloat::AutoCVar_VecFloat(const char* name, const char* description, const  vec4& defaultValue, CVarFlags flags /*= CVarFlags::None*/)
+{
+    CVarParameter* cvar = CVarSystem::Get()->CreateVecFloatCVar(name, description, defaultValue);
+    cvar->flags = flags;
+    index = cvar->arrayIndex;
+}
+
+vec4 AutoCVar_VecFloat::Get()
+{
+    return CVarSystemImpl::Get()->GetCVarArray<vec4>()->GetCurrent(index);
+}
+
+void AutoCVar_VecFloat::Set(const  vec4& val)
+{
+    CVarSystemImpl::Get()->GetCVarArray<vec4>()->SetCurrent(val,index);
+}
+
+AutoCVar_VecInt::AutoCVar_VecInt(const char* name, const char* description, const  ivec4& defaultValue, CVarFlags flags)
+{
+    CVarParameter* cvar = CVarSystem::Get()->CreateVecIntCVar(name, description, defaultValue);
+    cvar->flags = flags;
+    index = cvar->arrayIndex;
+}
+
+ ivec4 AutoCVar_VecInt::Get()
+{
+     return CVarSystemImpl::Get()->GetCVarArray<ivec4>()->GetCurrent(index);
+}
+
+void AutoCVar_VecInt::Set(const ivec4& val)
+{
+    CVarSystemImpl::Get()->GetCVarArray<ivec4>()->SetCurrent(val, index);
+}
+
+void CVarSystemImpl::DrawImguiEditor()
+{
+    static std::string searchText = "";
+
+    ImGui::InputText("Filter", &searchText);
+    static bool bShowAdvanced = false;
+    ImGui::Checkbox("Advanced", &bShowAdvanced);
+
+    cachedEditParameters.clear();
+
+    auto addToEditList = [&](auto parameter)
+    {
+        bool bHidden = ((u32)parameter->flags & (u32)CVarFlags::Noedit);
+        bool bIsAdvanced = ((u32)parameter->flags & (u32)CVarFlags::Advanced);
+
+        if (!bHidden)
+        {
+            if (!(!bShowAdvanced && bIsAdvanced) && parameter->name.find(searchText) != std::string::npos)
+            {
+                cachedEditParameters.push_back(parameter);
+            };
+        }
+    };
+
+    for (int i = 0; i < GetCVarArray<i32>()->lastCVar; i++)
+    {
+        addToEditList(GetCVarArray<i32>()->cvars[i].parameter);
+    }
+    for (int i = 0; i < GetCVarArray<f64>()->lastCVar; i++)
+    {
+        addToEditList(GetCVarArray<f64>()->cvars[i].parameter);
+    }
+    for (int i = 0; i < GetCVarArray<std::string>()->lastCVar; i++)
+    {
+        addToEditList(GetCVarArray<std::string>()->cvars[i].parameter);
+    }
+    for (int i = 0; i < GetCVarArray<vec4>()->lastCVar; i++)
+    {
+        addToEditList(GetCVarArray<vec4>()->cvars[i].parameter);
+    }
+    for (int i = 0; i < GetCVarArray<ivec4>()->lastCVar; i++)
+    {
+        addToEditList(GetCVarArray<ivec4>()->cvars[i].parameter);
+    }
+
+    if (cachedEditParameters.size() > 10)
+    {
+        std::unordered_map<std::string, std::vector<CVarParameter*>> categorizedParams;
+
+        //insert all the edit parameters into the hashmap by category
+        for (auto p : cachedEditParameters)
+        {
+            int dotPos = -1;
+            //find where the first dot is to categorize
+            for (int i = 0; i < p->name.length(); i++)
+            {
+                if (p->name[i] == '.')
+                {
+                    dotPos = i;
+                    break;
+                }
+            }
+            std::string category = "";
+            if (dotPos != -1)
+            {
+                category = p->name.substr(0, dotPos);
+            }
+
+            auto it = categorizedParams.find(category);
+            if (it == categorizedParams.end())
+            {
+                categorizedParams[category] = std::vector<CVarParameter*>();
+            }
+            it->second.push_back(p);
+        }
+
+        for (auto [category, parameters] : categorizedParams)
+        {
+            //alphabetical sort
+            std::sort(parameters.begin(), parameters.end(), [](CVarParameter* A, CVarParameter* B)
+                {
+                    return A->name < B->name;
+                });
+
+            if (ImGui::BeginMenu(category.c_str()))
+            {
+                for (auto p : parameters)
+                {
+                    EditParameter(p);
+                }
+
+                ImGui::EndMenu();
+            }
+        }
+    }
+    else
+    {
+        //alphabetical sort
+        std::sort(cachedEditParameters.begin(), cachedEditParameters.end(), [](CVarParameter* A, CVarParameter* B)
+            {
+                return A->name < B->name;
+            });
+
+        for (auto p : cachedEditParameters) {
+            EditParameter(p);
+        }
+    }
+}
+
+void CVarSystemImpl::EditParameter(CVarParameter* p)
+{
+    const bool readonlyFlag = ((u32)p->flags & (u32)CVarFlags::EditReadOnly);
+    const bool checkboxFlag = ((u32)p->flags & (u32)CVarFlags::EditCheckbox);
+    const bool dragFlag = ((u32)p->flags & (u32)CVarFlags::EditFloatDrag);
+
+    switch (p->type)
+    {
+    case CVarType::INT:
+
+        if (readonlyFlag)
+        {
+            std::string displayFormat = p->name + "= %i";
+            ImGui::Text(displayFormat.c_str(), GetCVarArray<i32>()->GetCurrent(p->arrayIndex));
+        }
+        else
+        {
+            if (checkboxFlag)
+            {
+                bool bCheckbox = GetCVarArray<i32>()->GetCurrent(p->arrayIndex) != 0;
+                ImGui::Checkbox(p->name.c_str(), &bCheckbox);
+
+                GetCVarArray<i32>()->SetCurrent(bCheckbox ? 1 : 0, p->arrayIndex);
+                // intCVars[p->arrayIndex].current = bCheckbox ? 1 : 0;
+            }
+            else
+            {
+                ImGui::InputInt(p->name.c_str(), GetCVarArray<i32>()->GetCurrentPtr(p->arrayIndex));
+            }
+        }
+        break;
+
+    case CVarType::FLOAT:
+
+        if (readonlyFlag)
+        {
+            std::string displayFormat = p->name + "= %f";
+            ImGui::Text(displayFormat.c_str(), GetCVarArray<f64>()->GetCurrent(p->arrayIndex));
+        }
+        else
+        {
+            if (dragFlag)
+            {
+                ImGui::InputDouble(p->name.c_str(), GetCVarArray<f64>()->GetCurrentPtr(p->arrayIndex));
+
+            }
+            else
+            {
+                ImGui::InputDouble(p->name.c_str(), GetCVarArray<f64>()->GetCurrentPtr(p->arrayIndex));
+            }
+        }
+        break;
+
+    case CVarType::FLOATVEC:      
+        
+        ImGui::InputFloat4(p->name.c_str(), &(*GetCVarArray<vec4>()->GetCurrentPtr(p->arrayIndex))[0]);
+        
+        break;
+
+    case CVarType::INTVEC:
+
+        ImGui::InputInt4(p->name.c_str(), &(*GetCVarArray<ivec4>()->GetCurrentPtr(p->arrayIndex))[0]);
+        break;
+
+    case CVarType::STRING:
+
+        if (readonlyFlag)
+        {
+            std::string displayFormat = p->name + "= %s";
+            ImGui::Text(displayFormat.c_str(), GetCVarArray<std::string>()->GetCurrent(p->arrayIndex));
+        }
+        else
+        {
+            ImGui::InputText(p->name.c_str(), GetCVarArray<std::string>()->GetCurrentPtr(p->arrayIndex));
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(p->description.c_str());
+    }
 }
