@@ -28,6 +28,13 @@ namespace Geometry
             vec3 b = vert3 - vert1;
             return glm::cross(a, b);
         }
+
+        f32 GetSteepnessAngle()
+        {
+            vec3 normal = glm::normalize(GetNormal());
+            f32 flatness = glm::abs(glm::dot(normal, vec3(0, 1, 0)));
+            return glm::degrees(acos(flatness));
+        }
     };
 
     struct AABoundingBox
