@@ -1,7 +1,7 @@
 /*
 # MIT License
 
-# Copyright(c) 2018-2019 NovusCore
+# Copyright(c) 2018-2020 NovusCore
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files(the "Software"), to deal
@@ -26,7 +26,8 @@
 
 class CVarParameter;
 
-enum class CVarFlags : uint32_t {
+enum class CVarFlags : u32
+{
     None = 0,
     Noedit = 1 << 1,
     EditReadOnly = 1 << 2,
@@ -41,7 +42,6 @@ class CVarSystem
 
 public:
     static CVarSystem* Get();
-   
 
     //pimpl
 
@@ -49,27 +49,27 @@ public:
     virtual CVarParameter* GetCVar(u32 namehash) = 0;
 
     
-    virtual float* GetFloatCVar(const char* name) = 0;
-    virtual float* GetFloatCVar(u32 namehash) = 0;
+    virtual f64* GetFloatCVar(const char* name) = 0;
+    virtual f64* GetFloatCVar(u32 namehash) = 0;
 
 
-    virtual int* GetIntCVar(const char* name) = 0;
-    virtual int* GetIntCVar(u32 namehash) = 0;
+    virtual i32* GetIntCVar(const char* name) = 0;
+    virtual i32* GetIntCVar(u32 namehash) = 0;
 
     virtual const char* GetStringCVar(const char* name) = 0;
     virtual const char* GetStringCVar(u32 namehash) = 0;
 
-    virtual void SetFloatCVar(const char* name, float value) = 0;
-    virtual void SetFloatCVar(u32 namehash, float value) = 0;
+    virtual void SetFloatCVar(const char* name, f64 value) = 0;
+    virtual void SetFloatCVar(u32 namehash, f64 value) = 0;
    
-    virtual void SetIntCVar(const char* name, int value) = 0;
-    virtual void SetIntCVar(u32 namehash, int value) = 0;
+    virtual void SetIntCVar(const char* name, i32 value) = 0;
+    virtual void SetIntCVar(u32 namehash, i32 value) = 0;
    
     virtual void SetStringCVar(const char* name, const char* value) = 0;
     virtual void SetStringCVar(u32 namehash, const char* value) = 0;
 
-    virtual CVarParameter* CreateFloatCVar(const char* name, const char* description,float defaultValue) = 0;
-    virtual CVarParameter* CreateIntCVar(const char* name, const char* description, int defaultValue) = 0;
+    virtual CVarParameter* CreateFloatCVar(const char* name, const char* description,f64 defaultValue) = 0;
+    virtual CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue) = 0;
     virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char * defaultValue) = 0;
 
     virtual void DrawImguiEditor() = 0;
@@ -77,19 +77,20 @@ public:
 
 struct AutoCVar_Float
 {
-    AutoCVar_Float(const char* name, const char* description, float defaultValue, CVarFlags flags = CVarFlags::None);
+    AutoCVar_Float(const char* name, const char* description, f64 defaultValue, CVarFlags flags = CVarFlags::None);
 
-    float Get();
-    void Set(float val);
+    f64 Get();
+    f32 GetFloat();
+    void Set(f64 val);
 private:
     int index;
 };
 
 struct AutoCVar_Int
 {
-    AutoCVar_Int(const char* name, const char* description, int defaultValue, CVarFlags flags = CVarFlags::None);
-    int Get();
-    void Set(int val);
+    AutoCVar_Int(const char* name, const char* description, i32 defaultValue, CVarFlags flags = CVarFlags::None);
+    i32 Get();
+    void Set(i32 val);
     
     void Toggle();
 private:
