@@ -46,7 +46,7 @@ class CVarParameter
 public:
     friend class CVarSystemImpl;
 
-    int arrayIndex;
+    i32 arrayIndex;
 
     CVarType type;
     CVarFlags flags;
@@ -63,26 +63,27 @@ struct CVarStorage
 };
 
 template<typename T>
-struct CVarArray {
+struct CVarArray
+{
     std::vector<CVarStorage<T>> cvars;
-    int lastCVar{0};
+    i32 lastCVar{0};
 
     CVarArray(size_t size)
     {
         cvars.resize(size);
     }
 
-    T* GetCurrentPtr(int index)
+    T* GetCurrentPtr(i32 index)
     {
        return &((cvars.data() + index)->current);
     };
 
-    T GetCurrent(int index)
+    T GetCurrent(i32 index)
     {
         return cvars[index].current;
     };
 
-    void SetCurrent(const T& val, int index)
+    void SetCurrent(const T& val, i32 index)
     {
         cvars[index].current = val;
     }
@@ -102,7 +103,8 @@ struct CVarArray {
     }
 };
 
-u32 Hash(const char* str) {
+u32 Hash(const char* str)
+{
     return StringUtils::fnv1a_32(str, strlen(str));
 }
 
@@ -223,7 +225,8 @@ public:
         SetCVarCurrent(Hash(name), value);
     }   
 
-    static CVarSystemImpl* Get() {
+    static CVarSystemImpl* Get()
+    {
         return static_cast<CVarSystemImpl*>(CVarSystem::Get());
     }
 

@@ -122,16 +122,16 @@ struct AutoCVar_String : AutoCVar
 
 struct AutoCVar_VecFloat : AutoCVar
 {
-    AutoCVar_VecFloat(const char* name, const char* description, const  vec4& defaultValue, CVarFlags flags = CVarFlags::None);
+    AutoCVar_VecFloat(const char* name, const char* description, const vec4& defaultValue, CVarFlags flags = CVarFlags::None);
 
-     vec4 Get();
-    void Set(const  vec4& val);
+    vec4 Get();
+    void Set(const vec4& val);
 };
 
 struct AutoCVar_VecInt : AutoCVar
 {
-    AutoCVar_VecInt(const char* name, const char* description, const  ivec4& defaultValue, CVarFlags flags = CVarFlags::None);
+    AutoCVar_VecInt(const char* name, const char* description, const ivec4& defaultValue, CVarFlags flags = CVarFlags::None);
 
-     ivec4 Get();
-    void Set(const  ivec4& val);
+    ivec4 Get();
+    void Set(const ivec4& val);
 };
