@@ -67,7 +67,8 @@ struct CVarArray {
     std::vector<CVarStorage<T>> cvars;
     int lastCVar{0};
 
-    CVarArray(size_t size){
+    CVarArray(size_t size)
+    {
         cvars.resize(size);
     }
 
@@ -86,7 +87,8 @@ struct CVarArray {
         cvars[index].current = val;
     }
 
-    int Add(const T& value, CVarParameter* param) {
+    int Add(const T& value, CVarParameter* param)
+    {
         int index = lastCVar;
 
         cvars[index].current = value;
@@ -629,7 +631,8 @@ void CVarSystemImpl::DrawImguiEditor()
                 return A->name < B->name;
             });
 
-        for (auto p : cachedEditParameters) {
+        for (auto p : cachedEditParameters)
+        {
             EditParameter(p);
         }
     }
