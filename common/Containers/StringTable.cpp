@@ -43,12 +43,12 @@ u32 StringTable::GetStringHash(u32 index)
     return _hashes[index];
 }
 
-void StringTable::Serialize(Bytebuffer* bytebuffer)
+void StringTable::Serialize(Bytebuffer* bytebuffer) const
 {
     // First we need to calculate the total size of our strings
     u32 totalSize = 0;
 
-    for (auto& string : _strings)
+    for (const auto& string : _strings)
     {
         totalSize += static_cast<u32>(string.size())+1;
     }
@@ -57,7 +57,7 @@ void StringTable::Serialize(Bytebuffer* bytebuffer)
     bytebuffer->Put<u32>(totalSize);
 
     // Then we go ahead and put each string
-    for (auto& string : _strings)
+    for (const auto& string : _strings)
     {
         bytebuffer->PutBytes((u8*)(string.c_str()), string.size()+1);
     }
@@ -96,7 +96,7 @@ void StringTable::CopyFrom(StringTable& other)
     _hashes = other._hashes;
 }
 
-bool StringTable::TryFindHashedString(u32 hash, u32& index)
+bool StringTable::TryFindHashedString(u32 hash, u32& index) const
 {
     for (size_t i = 0; i < _hashes.size(); i++)
     {
