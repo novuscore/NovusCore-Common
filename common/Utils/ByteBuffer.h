@@ -626,14 +626,6 @@ public:
 
             return buffer;
         }
-        else if constexpr (size <= 1048576)
-        {
-            std::shared_ptr<Bytebuffer> buffer = _byteBuffer1048576.acquireOrCreate(nullptr, 1048576);
-            buffer->size = size;
-            buffer->Reset();
-
-            return buffer;
-        }
         else if constexpr (size <= 8388608)
         {
             std::shared_ptr<Bytebuffer> buffer = _byteBuffer8388608.acquireOrCreate(nullptr, 8388608);
