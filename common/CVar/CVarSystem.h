@@ -23,6 +23,7 @@
 */
 #pragma once
 #include <NovusTypes.h>
+#include "Utils/StringUtils.h"
 
 class CVarParameter;
 
@@ -44,40 +45,27 @@ public:
     static CVarSystem* Get();
 
     //pimpl
-
-    virtual CVarParameter* GetCVar(const char* name) = 0;
-    virtual CVarParameter* GetCVar(u32 namehash) = 0;
-
+    virtual CVarParameter* GetCVar(StringUtils::StringHash hash) = 0;
     
-    virtual f64* GetFloatCVar(const char* name) = 0;
-    virtual f64* GetFloatCVar(u32 namehash) = 0;
+    virtual f64* GetFloatCVar(StringUtils::StringHash hash) = 0;
 
-    virtual i32* GetIntCVar(const char* name) = 0;
-    virtual i32* GetIntCVar(u32 namehash) = 0;
+    virtual i32* GetIntCVar(StringUtils::StringHash hash) = 0;
 
-    virtual const char* GetStringCVar(const char* name) = 0;
-    virtual const char* GetStringCVar(u32 namehash) = 0;
+    virtual const char* GetStringCVar(StringUtils::StringHash hash) = 0;
 
-    virtual vec4* GetVecFloatCVar(const char* name) = 0;
-    virtual vec4* GetVecFloatCVar(u32 namehash) = 0;
+    virtual vec4* GetVecFloatCVar(StringUtils::StringHash hash) = 0;
 
-    virtual ivec4* GetVecIntCVar(const char* name) = 0;
-    virtual ivec4* GetVecIntCVar(u32 namehash) = 0;
+    virtual ivec4* GetVecIntCVar(StringUtils::StringHash hash) = 0;
 
-    virtual void SetFloatCVar(const char* name, f64 value) = 0;
-    virtual void SetFloatCVar(u32 namehash, f64 value) = 0;
+    virtual void SetFloatCVar(StringUtils::StringHash hash, f64 value) = 0;
    
-    virtual void SetIntCVar(const char* name, i32 value) = 0;
-    virtual void SetIntCVar(u32 namehash, i32 value) = 0;
+    virtual void SetIntCVar(StringUtils::StringHash hash, i32 value) = 0;
    
-    virtual void SetStringCVar(const char* name, const char* value) = 0;
-    virtual void SetStringCVar(u32 namehash, const char* value) = 0;
+    virtual void SetStringCVar(StringUtils::StringHash hash, const char* value) = 0;
 
-    virtual void SetVecFloatCVar(const char* name, const vec4& value) = 0;
-    virtual void SetVecFloatCVar(u32 namehash, const vec4& value) = 0;
+    virtual void SetVecFloatCVar(StringUtils::StringHash hash, const vec4& value) = 0;
 
-    virtual void SetVecIntCVar(const char* name, const ivec4& value) = 0;
-    virtual void SetVecIntCVar(u32 namehash,const ivec4& value) = 0;
+    virtual void SetVecIntCVar(StringUtils::StringHash hash,const ivec4& value) = 0;
 
     virtual CVarParameter* CreateFloatCVar(const char* name, const char* description,f64 defaultValue) = 0;
     virtual CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue) = 0;

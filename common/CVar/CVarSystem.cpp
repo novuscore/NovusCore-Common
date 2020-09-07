@@ -24,7 +24,6 @@
 
 #include "CVarSystem.h"
 #include <unordered_map>
-#include "Utils/StringUtils.h"
 
 #include <array>
 #include <algorithm>
@@ -111,8 +110,7 @@ u32 Hash(const char* str)
 class CVarSystemImpl : public CVarSystem 
 {
 public:
-    CVarParameter* GetCVar(const char* name) override final;
-    CVarParameter* GetCVar(u32 namehash) override final;
+    CVarParameter* GetCVar(StringUtils::StringHash hash) override final;
 
     CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue) override final;
     CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue) override final;
@@ -120,32 +118,21 @@ public:
     CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const  vec4& defaultValue)override final;
     CVarParameter* CreateVecIntCVar(const char* name, const char* description, const  ivec4& defaultValue)override final;
 
-    f64* GetFloatCVar(const char* name) override final;
-    i32* GetIntCVar(const char* name) override final;
-    const char* GetStringCVar(const char* name) override final;
-    vec4* GetVecFloatCVar(const char* name) override final;
-    ivec4* GetVecIntCVar(const char* name) override final;
+    f64* GetFloatCVar(StringUtils::StringHash hash) override final; 
+    i32* GetIntCVar(StringUtils::StringHash hash) override final;
+    const char* GetStringCVar(StringUtils::StringHash hash) override final;
+    vec4* GetVecFloatCVar(StringUtils::StringHash hash) override final;
+    ivec4* GetVecIntCVar(StringUtils::StringHash hash) override final;
 
-    f64* GetFloatCVar(u32 namehash) override final; 
-    i32* GetIntCVar(u32 namehash) override final;
-    const char* GetStringCVar(u32 namehash) override final;
-    vec4* GetVecFloatCVar(u32 namehash) override final;
-    ivec4* GetVecIntCVar(u32 namehash) override final;
+    void SetFloatCVar(StringUtils::StringHash hash, f64 value) override final;
 
-    void SetFloatCVar(const char* name, f64 value) override final;
-    void SetFloatCVar(u32 namehash, f64 value) override final;
+    void SetIntCVar(StringUtils::StringHash hash, i32 value) override final;
 
-    void SetIntCVar(const char* name, i32 value) override final;
-    void SetIntCVar(u32 namehash, i32 value) override final;
+    void SetStringCVar(StringUtils::StringHash hash, const char* value) override final;
 
-    void SetStringCVar(const char* name, const char* value) override final;
-    void SetStringCVar(u32 namehash, const char* value) override final;
+    void SetVecFloatCVar(StringUtils::StringHash hash, const vec4& value) override final;
 
-    void SetVecFloatCVar(const char* name, const vec4& value) override final;
-    void SetVecFloatCVar(u32 namehash, const vec4& value) override final;
-
-    void SetVecIntCVar(const char* name, const  ivec4& value) override final;
-    void SetVecIntCVar(u32 namehash, const ivec4& value) override final;
+    void SetVecIntCVar(StringUtils::StringHash hash, const ivec4& value) override final;
 
     void DrawImguiEditor() override final;
 
@@ -210,20 +197,10 @@ public:
     }
 
     template<typename T>
-    T* GetCVarCurrent(const char* name)
-    {
-        return GetCVarCurrent<T>(Hash(name));
-    }
-    template<typename T>
     void SetCVarCurrent(u32 namehash, const T& value)
     {
         GetCVarArray<T>()->SetCurrent(value, GetCVar(namehash)->arrayIndex);
     }
-    template<typename T>
-    void SetCVarCurrent(const char* name, const T& value)
-    {
-        SetCVarCurrent(Hash(name), value);
-    }   
 
     static CVarSystemImpl* Get()
     {
@@ -239,52 +216,29 @@ private:
     std::vector<CVarParameter*> cachedEditParameters;
 };
 
-f64* CVarSystemImpl::GetFloatCVar(const char* name) 
+f64* CVarSystemImpl::GetFloatCVar(StringUtils::StringHash hash)
 {
-    return GetCVarCurrent<f64>(name);
-}
-int* CVarSystemImpl::GetIntCVar(const char* name)
-{
-    return GetCVarCurrent<i32>(name);
-}
-const char* CVarSystemImpl::GetStringCVar(const char* name)
-{
-    return GetStringCVar(Hash(name));
+    return GetCVarCurrent<f64>(hash);
 }
 
-vec4* CVarSystemImpl::GetVecFloatCVar(const char* name)
+i32* CVarSystemImpl::GetIntCVar(StringUtils::StringHash hash)
 {
-    return GetCVarCurrent<vec4>(name);
+    return GetCVarCurrent<i32>(hash);
 }
 
-ivec4* CVarSystemImpl::GetVecIntCVar(const char* name)
+const char* CVarSystemImpl::GetStringCVar(StringUtils::StringHash hash)
 {
-    return GetCVarCurrent<ivec4>(name);
+    return GetCVarCurrent<std::string>(hash)->c_str();
 }
 
-f64* CVarSystemImpl::GetFloatCVar(u32 namehash)
+vec4* CVarSystemImpl::GetVecFloatCVar(StringUtils::StringHash hash)
 {
-    return GetCVarCurrent<f64>(namehash);
+    return GetCVarCurrent<vec4>(hash);
 }
 
-i32* CVarSystemImpl::GetIntCVar(u32 namehash)
+ivec4* CVarSystemImpl::GetVecIntCVar(StringUtils::StringHash hash)
 {
-    return GetCVarCurrent<i32>(namehash);
-}
-
-const char* CVarSystemImpl::GetStringCVar(u32 namehash)
-{
-    return GetCVarCurrent<std::string>(namehash)->c_str();
-}
-
-vec4* CVarSystemImpl::GetVecFloatCVar(u32 namehash)
-{
-    return GetCVarCurrent<vec4>(namehash);
-}
-
-ivec4* CVarSystemImpl::GetVecIntCVar(u32 namehash)
-{
-    return GetCVarCurrent<ivec4>(namehash);
+    return GetCVarCurrent<ivec4>(hash);
 }
 
 CVarSystem* CVarSystem::Get()
@@ -293,15 +247,10 @@ CVarSystem* CVarSystem::Get()
     return &cvarSys;
 }
 
-CVarParameter* CVarSystemImpl::GetCVar(const char* name)
-{
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
-    return GetCVar(namehash);
-}
 
-CVarParameter* CVarSystemImpl::GetCVar(u32 namehash)
+CVarParameter* CVarSystemImpl::GetCVar(StringUtils::StringHash hash)
 {
-    auto it = savedCVars.find(namehash);
+    auto it = savedCVars.find(hash);
 
     if (it != savedCVars.end())
     {
@@ -311,53 +260,29 @@ CVarParameter* CVarSystemImpl::GetCVar(u32 namehash)
     return nullptr;
 }
 
-void CVarSystemImpl::SetFloatCVar(const char* name, f64 value)
+void CVarSystemImpl::SetFloatCVar(StringUtils::StringHash hash, f64 value)
 {
-    SetCVarCurrent<f64>(name, value);
-}
-void CVarSystemImpl::SetFloatCVar(u32 namehash, f64 value)
-{
-    SetCVarCurrent<f64>(namehash, value);
+    SetCVarCurrent<f64>(hash, value);
 }
 
-void CVarSystemImpl::SetIntCVar(const char* name, i32 value)
+void CVarSystemImpl::SetIntCVar(StringUtils::StringHash hash, i32 value)
 {
-    SetCVarCurrent<i32>(name, value);
+    SetCVarCurrent<i32>(hash, value);
 }
 
-void CVarSystemImpl::SetIntCVar(u32 namehash, i32 value)
+void CVarSystemImpl::SetStringCVar(StringUtils::StringHash hash, const char* value)
 {
-    SetCVarCurrent<i32>(namehash, value);
+    SetCVarCurrent<std::string>(hash, value);
 }
 
-void CVarSystemImpl::SetStringCVar(const char* name, const char* value)
+void CVarSystemImpl::SetVecFloatCVar(StringUtils::StringHash hash, const vec4& value)
 {
-    SetCVarCurrent<std::string>(name, value);
+    SetCVarCurrent<vec4>(hash, value);
 }
 
-void CVarSystemImpl::SetStringCVar(u32 namehash, const char* value)
+void CVarSystemImpl::SetVecIntCVar(StringUtils::StringHash hash, const ivec4& value)
 {
-    SetCVarCurrent<std::string>(namehash, value);
-}
-
-void CVarSystemImpl::SetVecFloatCVar(u32 namehash, const vec4& value)
-{
-    SetCVarCurrent<vec4>(namehash, value);
-}
-
-void CVarSystemImpl::SetVecFloatCVar(const char* name, const vec4& value)
-{
-    SetCVarCurrent<vec4>(name, value);
-}
-
-void CVarSystemImpl::SetVecIntCVar(u32 namehash, const ivec4& value)
-{
-    SetCVarCurrent<ivec4>(namehash, value);
-}
-
-void CVarSystemImpl::SetVecIntCVar(const char* name, const ivec4& value)
-{
-    SetCVarCurrent<ivec4>(name, value);
+    SetCVarCurrent<ivec4>(hash, value);
 }
 
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, f64 defaultValue)
@@ -423,7 +348,7 @@ CVarParameter* CVarSystemImpl::CreateVecIntCVar(const char* name, const char* de
 CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* description)
 {
     if (GetCVar(name)) return nullptr; //return null if the cvar already exists
-    u32 namehash = StringUtils::fnv1a_32(name, strlen(name));
+    u32 namehash = StringUtils::StringHash{ name };
     savedCVars[namehash] = CVarParameter{};
 
     CVarParameter& newParam = savedCVars[namehash];

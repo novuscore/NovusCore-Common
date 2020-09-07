@@ -105,6 +105,36 @@ constexpr u32 fnv1a_32(char const* s, std::size_t count)
     return ((count ? fnv1a_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
 }
 
+constexpr size_t const_strlen(const char* s) {
+    size_t size = 0;
+    while (s[size]) { size++; };
+    return size;
+}
+
+
+struct StringHash {
+    u32 computedHash;
+
+    constexpr StringHash(u32 hash)noexcept : computedHash(hash) {}
+
+    constexpr StringHash(const char* s) noexcept: computedHash(0)
+    {
+        computedHash = fnv1a_32(s, const_strlen(s));
+    }
+    constexpr StringHash(const char* s, std::size_t count)noexcept : computedHash(0)
+    {
+        computedHash = fnv1a_32(s, count);
+    }
+    constexpr StringHash(std::string_view s)noexcept : computedHash(0)
+    {
+        computedHash = fnv1a_32(s.data(),s.size());
+    }
+    StringHash(const StringHash& other) = default;
+
+    constexpr operator u32()noexcept { return computedHash; }
+};
+
+
 #ifdef _WINDOWS
 inline std::wstring StringToWString(const std::string& s)
 {
@@ -148,7 +178,7 @@ inline bool EndsWith(std::string const& fullString, std::string const& ending)
 }
 } // namespace StringUtils
 
-constexpr u32 operator"" _h(char const* s, std::size_t count)
+constexpr StringUtils::StringHash operator"" _h(char const* s, std::size_t count)
 {
-    return StringUtils::fnv1a_32(s, count);
+    return StringUtils::StringHash{ s,count };//StringUtils::fnv1a_32(s, count);
 }
