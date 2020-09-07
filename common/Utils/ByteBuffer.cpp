@@ -12,4 +12,5 @@ SharedPool<Bytebuffer> Bytebuffer::_byteBuffer131072;
 SharedPool<Bytebuffer> Bytebuffer::_byteBuffer262144;
 SharedPool<Bytebuffer> Bytebuffer::_byteBuffer524288;
 SharedPool<Bytebuffer> Bytebuffer::_byteBuffer1048576;
+SharedPool<Bytebuffer> Bytebuffer::_byteBuffer8388608;
 SharedPool<Bytebuffer> Bytebuffer::_byteBuffer209715200;

@@ -28,23 +28,24 @@ class Bytebuffer;
 class StringTable
 {
 public:
+    StringTable() { }
+
     // Add string, return index into table
     u32 AddString(const std::string& string);
 
     const std::string& GetString(u32 index);
     u32 GetStringHash(u32 index);
 
-    size_t GetNumStrings() { return _strings.size(); }
+    size_t GetNumStrings() const { return _strings.size(); }
 
-    void Serialize(Bytebuffer* bytebuffer);
+    void Serialize(Bytebuffer* bytebuffer) const;
     void Deserialize(Bytebuffer* bytebuffer);
 
     void CopyFrom(StringTable& other);
 
     void Clear();
 
-private:
-    bool TryFindHashedString(u32 hash, u32& index);
+    bool TryFindHashedString(u32 hash, u32& index) const;
 
 private:
     std::vector<std::string> _strings;
