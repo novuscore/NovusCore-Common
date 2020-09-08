@@ -149,6 +149,7 @@ namespace ShaderCooker
             L"-fvk-use-gl-layout", // Set memory layout
             L"-Zpr",            //Row-major matrices
             L"-WX",             //Warnings as errors
+            L"-enable-16bit-types", // Enable 16 bit types
     #ifdef _DEBUG
             L"-Zi",             //Debug info
             //L"-Qembed_debug", //Embed debug info into the shader
