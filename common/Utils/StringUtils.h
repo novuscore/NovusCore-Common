@@ -105,14 +105,15 @@ constexpr u32 fnv1a_32(char const* s, std::size_t count)
     return ((count ? fnv1a_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
 }
 
-constexpr size_t const_strlen(const char* s) {
+constexpr size_t const_strlen(const char* s)
+{
     size_t size = 0;
     while (s[size]) { size++; };
     return size;
 }
 
-
-struct StringHash {
+struct StringHash
+{
     u32 computedHash;
 
     constexpr StringHash(u32 hash)noexcept : computedHash(hash) {}
@@ -180,5 +181,5 @@ inline bool EndsWith(std::string const& fullString, std::string const& ending)
 
 constexpr StringUtils::StringHash operator"" _h(char const* s, std::size_t count)
 {
-    return StringUtils::StringHash{ s,count };//StringUtils::fnv1a_32(s, count);
+    return StringUtils::StringHash{ s,count };
 }
