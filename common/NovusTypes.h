@@ -27,6 +27,7 @@
 #include <string>
 
 #include <glm/glm.hpp>
+#include <glm/detail/type_half.hpp>
 #include "Math/Math.h"
 #include "Math/Color.h"
 #include "Math/Half.h"
@@ -46,10 +47,13 @@ using f64 = double;
 using vec2 = glm::vec2;
 using ivec2 = glm::ivec2;
 using uvec2 = glm::uvec2;
+using hvec2 = glm::vec<2, f16>;
 using vec3 = glm::vec3;
 using ivec3 = glm::ivec3;
 using uvec3 = glm::uvec3;
+using hvec3 = glm::vec<3, f16>;
 using vec4 = glm::vec4;
 using ivec4 = glm::ivec4;
 using uvec4 = glm::uvec4;
+using hvec4 = glm::vec<4, f16>;
 using mat4x4 = glm::mat4x4;
