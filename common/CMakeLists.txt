@@ -16,6 +16,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     openssl::openssl
     type_safe::type_safe
 	Entt::Entt
+    imgui::imgui
 )
 
 add_compile_definitions(NOMINMAX _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
