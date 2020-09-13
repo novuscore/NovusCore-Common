@@ -32,6 +32,10 @@ if(NOT TARGET mysql)
     add_subdirectory(mysql)
 endif()
 
+if(NOT TARGET npas4)
+    add_subdirectory(npas4)
+endif()
+
 if(NOT TARGET openssl)
     add_subdirectory(openssl)
 endif()
