@@ -91,7 +91,7 @@ public:
         swap(static_cast<T&>(a), static_cast<T&>(b));
     }
 
-private:
+protected:
     T value_;
 };
 
@@ -831,6 +831,10 @@ struct typeName : type_safe::strong_typedef<typeName, _type>, typeName##comparis
     static typeName Invalid() \
     { \
         return typeName(typeName(typeName::MaxValueTyped())); \
+    } \
+    typeName() \
+    { \
+      value_ = (type)Invalid(); \
     } \
 }; 
 
