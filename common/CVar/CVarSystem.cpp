@@ -528,6 +528,7 @@ void CVarSystemImpl::DrawImguiEditor()
             if (it == categorizedParams.end())
             {
                 categorizedParams[category] = std::vector<CVarParameter*>();
+                it = categorizedParams.find(category);
             }
             it->second.push_back(p);
         }
