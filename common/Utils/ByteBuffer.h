@@ -203,6 +203,18 @@ public:
         readData += readSize;
         return true;
     }
+    inline void GetString(char*& val)
+    {
+        assert(_data != nullptr);
+
+        val = reinterpret_cast<char*>(&_data[readData]);
+        while (readData < size)
+        {
+            char c = _data[readData++];
+            if (c == 0)
+                break;
+        }
+    }
     inline void GetString(std::string& val)
     {
         assert(_data != nullptr);

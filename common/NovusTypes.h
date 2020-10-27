@@ -52,6 +52,7 @@ using vec3 = glm::vec3;
 using ivec3 = glm::ivec3;
 using uvec3 = glm::uvec3;
 using hvec3 = glm::vec<3, f16>;
+using u8vec4 = glm::vec<4, u8>;
 using vec4 = glm::vec4;
 using ivec4 = glm::ivec4;
 using uvec4 = glm::uvec4;
