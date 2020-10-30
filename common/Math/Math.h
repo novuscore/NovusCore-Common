@@ -170,4 +170,9 @@ inline float Lerp(float start, float end, float t)
     return (start + t * (end - start));
 }
 
+__forceinline float Map(float value, float originalMin, float originalMax, float newMin, float newMax)
+{
+    return (value - originalMin) / (originalMax - originalMin) * (newMax - newMin) + newMin;
+}
+
 }; // namespace Math
