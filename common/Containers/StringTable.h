@@ -29,6 +29,11 @@ class StringTable
 {
 public:
     StringTable() { }
+    StringTable(size_t numToReserve) 
+    {
+        _strings.reserve(numToReserve);
+        _hashes.reserve(numToReserve);
+    }
 
     // Add string, return index into table
     u32 AddString(const std::string& string);
@@ -38,8 +43,8 @@ public:
 
     size_t GetNumStrings() const { return _strings.size(); }
 
-    void Serialize(Bytebuffer* bytebuffer) const;
-    void Deserialize(Bytebuffer* bytebuffer);
+    bool Serialize(Bytebuffer* bytebuffer) const;
+    bool Deserialize(Bytebuffer* bytebuffer);
 
     void CopyFrom(StringTable& other);
 

@@ -43,10 +43,14 @@ u32 StringTable::GetStringHash(u32 index)
     return _hashes[index];
 }
 
-void StringTable::Serialize(Bytebuffer* bytebuffer) const
+bool StringTable::Serialize(Bytebuffer* bytebuffer) const
 {
+    // Here we use result as an inverse value to calculate cheaply if we serialized successfully
+    bool result = false;
+
     // First we need to calculate the total size of our strings
     u32 totalSize = 0;
+
 
     for (const auto& string : _strings)
     {
@@ -59,20 +63,23 @@ void StringTable::Serialize(Bytebuffer* bytebuffer) const
     // Then we go ahead and put each string
     for (const auto& string : _strings)
     {
-        bytebuffer->PutBytes((u8*)(string.c_str()), string.size()+1);
+        result |= !bytebuffer->PutBytes((u8*)(string.c_str()), string.size()+1);
     }
+
+    return !result;
 }
 
-void StringTable::Deserialize(Bytebuffer* bytebuffer)
+bool StringTable::Deserialize(Bytebuffer* bytebuffer)
 {
     // First we read the total size of strings to read
     u32 totalSize;
     if (!bytebuffer->GetU32(totalSize))
     {
         assert(false);
+        return false;
     }
     if (totalSize == 0)
-        return;
+        return true;
 
     std::string string;
     u32 readSize = 0;
@@ -85,6 +92,8 @@ void StringTable::Deserialize(Bytebuffer* bytebuffer)
         _hashes.push_back(hashedString);
         readSize += static_cast<u32>(string.length()+1);
     }
+
+    return true;
 }
 
 void StringTable::CopyFrom(StringTable& other)

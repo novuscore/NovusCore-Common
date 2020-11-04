@@ -116,7 +116,7 @@ struct StringHash
 {
     u32 computedHash;
 
-    constexpr StringHash(u32 hash)noexcept : computedHash(hash) {}
+    constexpr StringHash(u32 hash) noexcept : computedHash(hash) {}
 
     constexpr StringHash(const char* s) noexcept: computedHash(0)
     {
