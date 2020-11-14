@@ -1,19 +1,20 @@
 #include "JsonConfig.h"
 #include "../Utils/DebugHandler.h"
 
+#include <iostream>
+#include <fstream>
+
 bool JsonConfig::Load(const fs::path& configPath)
 {
-    std::ifstream configFile(configPath, std::ofstream::in);
-    try
+    std::ifstream configFile(configPath, std::ifstream::in);
+    if (!configFile)
     {
-        configFile >> _configFile;
-        configFile.close();
-    }
-    catch (nlohmann::detail::exception e)
-    {
-        NC_LOG_FATAL("Could not find '%s' in directory. Press a key to exit.", configPath.filename().string().c_str());
+        NC_LOG_ERROR("Failed to open %s. Check admin permissions", configPath.filename().string().c_str());
         return false;
     }
+
+    configFile >> _configFile;
+    configFile.close();
 
     if (_configFile.size() == 0)
     {
@@ -32,7 +33,7 @@ bool JsonConfig::LoadOrCreate(const fs::path& configPath, json& configDefault)
         std::ofstream configStream(configPath, std::ofstream::out);
         if (!configStream)
         {
-            NC_LOG_ERROR("Failed to create config file. Check admin permissions");
+            NC_LOG_ERROR("Failed to create json config file. Check admin permissions");
             return false;
         }
        
@@ -41,6 +42,21 @@ bool JsonConfig::LoadOrCreate(const fs::path& configPath, json& configDefault)
     }
 
     return Load(configPath);
+}
+
+bool JsonConfig::Save(const fs::path& configPath)
+{
+    std::ofstream configFile(configPath);
+    if (!configFile)
+    {
+        NC_LOG_ERROR("Failed to save %s. Check admin permissions", configPath.filename().string().c_str());
+        return false;
+    }
+
+    configFile << _configFile.dump(4);
+    configFile.close();
+
+    return true;
 }
 
 json::value_type JsonConfig::FindOptionInArray(std::string optionName, json::value_type value)

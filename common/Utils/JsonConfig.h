@@ -21,8 +21,6 @@
 #pragma once
 
 #include "json.hpp"
-#include <iostream>
-#include <fstream>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -35,6 +33,8 @@ public:
 
     bool Load(const fs::path& configPath);
     bool LoadOrCreate(const fs::path& configPath, json& configDefault);
+
+    bool Save(const fs::path& configPath);
 
     template <class T>
     T& GetOption(std::string optionName, T defaultValue)

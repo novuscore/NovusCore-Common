@@ -24,6 +24,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include "Utils/StringUtils.h"
+#include <Utils/JsonConfig.h>
 
 class CVarParameter;
 
@@ -67,13 +68,27 @@ public:
 
     virtual void SetVecIntCVar(StringUtils::StringHash hash,const ivec4& value) = 0;
 
-    virtual CVarParameter* CreateFloatCVar(const char* name, const char* description,f64 defaultValue) = 0;
+    virtual CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue) = 0;
+    virtual CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue, f64 currentValue) = 0;
     virtual CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue) = 0;
-    virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char * defaultValue) = 0;
+    virtual CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue, i32 currentValue) = 0;
+    virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue) = 0;
+    virtual CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue) = 0;
     virtual CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const vec4& defaultValue) = 0;
+    virtual CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const vec4& defaultValue, const vec4& currentValue) = 0;
     virtual CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue) = 0;
+    virtual CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue) = 0;
 
     virtual void DrawImguiEditor() = 0;
+    virtual void LoadCVarsIntoJson(json& jsonConfig) = 0;
+    virtual void LoadCVarsFromJson(json& jsonConfig) = 0;
+
+    void MarkDirty() { _isDirty = true; }
+    void ClearDirty() { _isDirty = false; }
+    bool IsDirty() { return _isDirty; }
+
+private:
+    bool _isDirty = false;
 };
 
 struct AutoCVar
@@ -87,7 +102,9 @@ struct AutoCVar_Float : AutoCVar
     AutoCVar_Float(const char* name, const char* description, f64 defaultValue, CVarFlags flags = CVarFlags::None);
 
     f64 Get();
+    f64* GetPtr();
     f32 GetFloat();
+    f32* GetFloatPtr();
     void Set(f64 val);
 };
 
@@ -95,6 +112,7 @@ struct AutoCVar_Int : AutoCVar
 {
     AutoCVar_Int(const char* name, const char* description, i32 defaultValue, CVarFlags flags = CVarFlags::None);
     i32 Get();
+    i32* GetPtr();
     void Set(i32 val);
     
     void Toggle();

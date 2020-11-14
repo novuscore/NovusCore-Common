@@ -24,6 +24,7 @@
 #include <shared_mutex>
 
 class Bytebuffer;
+class DynamicBytebuffer;
 
 class StringTable
 {
@@ -44,7 +45,9 @@ public:
     size_t GetNumStrings() const { return _strings.size(); }
 
     bool Serialize(Bytebuffer* bytebuffer) const;
+    bool Serialize(DynamicBytebuffer* bytebuffer) const;
     bool Deserialize(Bytebuffer* bytebuffer);
+    bool Deserialize(DynamicBytebuffer* bytebuffer);
 
     void CopyFrom(StringTable& other);
 
