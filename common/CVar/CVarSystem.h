@@ -80,7 +80,7 @@ public:
     virtual CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue) = 0;
 
     virtual void DrawImguiEditor() = 0;
-	
+    
     void MarkDirty() { _isDirty = true; }
     void ClearDirty() { _isDirty = false; }
     bool IsDirty() { return _isDirty; }
