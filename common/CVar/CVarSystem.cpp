@@ -33,6 +33,8 @@
 #include "imgui/imgui.h"
 #include "imgui/misc/cpp/imgui_stdlib.h"
 
+#include <shared_mutex>
+
 enum class CVarType : u8
 {
     INT,
@@ -142,15 +144,15 @@ class CVarSystemImpl : public CVarSystem
 public:
     CVarParameter* GetCVar(StringUtils::StringHash hash) override final;
 
-    CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue) override final;
+    
     CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue, f64 currentValue) override final;
-    CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue) override final;
+    
     CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue, i32 currentValue) override final;
-    CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue) override final;
+    
     CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue) override final;
-    CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const vec4& defaultValue)override final;
+  
     CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const vec4& defaultValue, const vec4& currentValue)override final;
-    CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue)override final;
+    
     CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue)override final;
 
     f64* GetFloatCVar(StringUtils::StringHash hash) override final;
@@ -245,6 +247,7 @@ public:
     }
 
 private:
+    std::shared_mutex mutex_;
 
     CVarParameter* InitCVar(const char* name, const char* description);
 
@@ -287,6 +290,7 @@ CVarSystem* CVarSystem::Get()
 
 CVarParameter* CVarSystemImpl::GetCVar(StringUtils::StringHash hash)
 {
+	std::shared_lock lock(mutex_);
     auto it = savedCVars.find(hash);
 
     if (it != savedCVars.end())
@@ -322,38 +326,16 @@ void CVarSystemImpl::SetVecIntCVar(StringUtils::StringHash hash, const ivec4& va
     SetCVarCurrent<ivec4>(hash, value);
 }
 
-CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, f64 defaultValue)
-{
-    CVarParameter* param = InitCVar(name, description);
-    if (!param) return nullptr;
-
-    param->type = CVarType::FLOAT;
-
-    GetCVarArray<f64>()->Add(defaultValue, param);
-
-    return param;
-}
 
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, f64 defaultValue, f64 currentValue)
 {
     CVarParameter* param = InitCVar(name, description);
     if (!param) return nullptr;
 
+    std::unique_lock lock(mutex_);
     param->type = CVarType::FLOAT;
 
     GetCVarArray<f64>()->Add(defaultValue, currentValue, param);
-
-    return param;
-}
-
-CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* description, i32 defaultValue)
-{
-    CVarParameter* param = InitCVar(name, description);
-    if (!param) return nullptr;
-
-    param->type = CVarType::INT;
-
-    GetCVarArray<i32>()->Add(defaultValue, param);
 
     return param;
 }
@@ -362,22 +344,10 @@ CVarParameter* CVarSystemImpl::CreateIntCVar(const char* name, const char* descr
 {
     CVarParameter* param = InitCVar(name, description);
     if (!param) return nullptr;
-
+    std::unique_lock lock(mutex_);
     param->type = CVarType::INT;
 
     GetCVarArray<i32>()->Add(defaultValue, currentValue, param);
-
-    return param;
-}
-
-CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* description, const char* defaultValue)
-{
-    CVarParameter* param = InitCVar(name, description);
-    if (!param) return nullptr;
-
-    param->type = CVarType::STRING;
-
-    GetCVarArray<std::string>()->Add(defaultValue, param);
 
     return param;
 }
@@ -387,21 +357,10 @@ CVarParameter* CVarSystemImpl::CreateStringCVar(const char* name, const char* de
     CVarParameter* param = InitCVar(name, description);
     if (!param) return nullptr;
 
+    std::unique_lock lock(mutex_);
     param->type = CVarType::STRING;
 
     GetCVarArray<std::string>()->Add(defaultValue, currentValue, param);
-
-    return param;
-}
-
-CVarParameter* CVarSystemImpl::CreateVecFloatCVar(const char* name, const char* description, const vec4& defaultValue)
-{
-    CVarParameter* param = InitCVar(name, description);
-    if (!param) return nullptr;
-
-    param->type = CVarType::FLOATVEC;
-
-    GetCVarArray<vec4>()->Add(defaultValue, param);
 
     return param;
 }
@@ -411,6 +370,7 @@ CVarParameter* CVarSystemImpl::CreateVecFloatCVar(const char* name, const char* 
     CVarParameter* param = InitCVar(name, description);
     if (!param) return nullptr;
 
+    std::unique_lock lock(mutex_);
     param->type = CVarType::FLOATVEC;
 
     GetCVarArray<vec4>()->Add(defaultValue, currentValue, param);
@@ -418,23 +378,13 @@ CVarParameter* CVarSystemImpl::CreateVecFloatCVar(const char* name, const char* 
     return param;
 }
 
-CVarParameter* CVarSystemImpl::CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue)
-{
-    CVarParameter* param = InitCVar(name, description);
-    if (!param) return nullptr;
-
-    param->type = CVarType::INTVEC;
-
-    GetCVarArray<ivec4>()->Add(defaultValue, param);
-
-    return param;
-}
 
 CVarParameter* CVarSystemImpl::CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue)
 {
     CVarParameter* param = InitCVar(name, description);
     if (!param) return nullptr;
 
+    std::unique_lock lock(mutex_);
     param->type = CVarType::INTVEC;
 
     GetCVarArray<ivec4>()->Add(defaultValue, currentValue, param);
@@ -445,6 +395,8 @@ CVarParameter* CVarSystemImpl::CreateVecIntCVar(const char* name, const char* de
 CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* description)
 {
     if (GetCVar(name)) return nullptr; //return null if the cvar already exists
+
+    std::unique_lock lock(mutex_);
     u32 namehash = StringUtils::StringHash{ name };
     savedCVars[namehash] = CVarParameter{};
 
@@ -458,7 +410,7 @@ CVarParameter* CVarSystemImpl::InitCVar(const char* name, const char* descriptio
 
 AutoCVar_Float::AutoCVar_Float(const char* name, const char* description, f64 defaultValue, CVarFlags flags)
 {
-    CVarParameter* cvar = CVarSystem::Get()->CreateFloatCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateFloatCVar(name, description, defaultValue,defaultValue);
     cvar->flags = flags;
     index = cvar->arrayIndex;
 }
@@ -491,7 +443,7 @@ void AutoCVar_Float::Set(f64 f)
 
 AutoCVar_Int::AutoCVar_Int(const char* name, const char* description, i32 defaultValue, CVarFlags flags)
 {
-    CVarParameter* cvar = CVarSystem::Get()->CreateIntCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateIntCVar(name, description, defaultValue, defaultValue);
     cvar->flags = flags;
     index = cvar->arrayIndex;
 }
@@ -520,7 +472,7 @@ void AutoCVar_Int::Toggle()
 
 AutoCVar_String::AutoCVar_String(const char* name, const char* description, const char* defaultValue, CVarFlags flags)
 {
-    CVarParameter* cvar = CVarSystem::Get()->CreateStringCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateStringCVar(name, description, defaultValue, defaultValue);
     cvar->flags = flags;
     index = cvar->arrayIndex;
 }
@@ -537,8 +489,8 @@ void AutoCVar_String::Set(std::string&& val)
 
 AutoCVar_VecFloat::AutoCVar_VecFloat(const char* name, const char* description, const vec4& defaultValue, CVarFlags flags /*= CVarFlags::None*/)
 {
-    CVarParameter* cvar = CVarSystem::Get()->CreateVecFloatCVar(name, description, defaultValue);
-    cvar->flags = flags;
+	CVarParameter* cvar = CVarSystem::Get()->CreateVecFloatCVar(name, description, defaultValue, defaultValue);
+	cvar->flags = flags;
     index = cvar->arrayIndex;
 }
 
@@ -554,7 +506,7 @@ void AutoCVar_VecFloat::Set(const vec4& val)
 
 AutoCVar_VecInt::AutoCVar_VecInt(const char* name, const char* description, const ivec4& defaultValue, CVarFlags flags)
 {
-    CVarParameter* cvar = CVarSystem::Get()->CreateVecIntCVar(name, description, defaultValue);
+    CVarParameter* cvar = CVarSystem::Get()->CreateVecIntCVar(name, description, defaultValue, defaultValue);
     cvar->flags = flags;
     index = cvar->arrayIndex;
 }
@@ -1038,4 +990,13 @@ void CVarSystemImpl::EditParameter(CVarParameter* p)
     {
         ImGui::SetTooltip(p->description.c_str());
     }
+}
+
+void JsonConfig::LoadCVarsIntoJson(json& jsonConfig)
+{
+    CVarSystemImpl::Get()->LoadCVarsIntoJson(jsonConfig);
+}
+void JsonConfig::LoadCVarsFromJson(json& jsonConfig)
+{
+    CVarSystemImpl::Get()->LoadCVarsFromJson(jsonConfig);
 }

@@ -79,7 +79,8 @@ public:
     {
         return _configFile[keyName];
     }
-
+	static void LoadCVarsIntoJson(json& jsonConfig);
+	static void LoadCVarsFromJson(json& jsonConfig);
 private:
     json::value_type FindOptionInArray(std::string optionName, json::value_type value);
 
