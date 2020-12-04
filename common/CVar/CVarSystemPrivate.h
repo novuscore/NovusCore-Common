@@ -136,15 +136,10 @@ class CVarSystemImpl : public CVarSystem
 public:
     CVarParameter* GetCVar(StringUtils::StringHash hash) override final;
 
-
     CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue, f64 currentValue) override final;
-
     CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue, i32 currentValue) override final;
-
     CVarParameter* CreateStringCVar(const char* name, const char* description, const char* defaultValue, const char* currentValue) override final;
-
     CVarParameter* CreateVecFloatCVar(const char* name, const char* description, const vec4& defaultValue, const vec4& currentValue)override final;
-
     CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue)override final;
 
     f64* GetFloatCVar(StringUtils::StringHash hash) override final;
@@ -154,13 +149,9 @@ public:
     ivec4* GetVecIntCVar(StringUtils::StringHash hash) override final;
 
     void SetFloatCVar(StringUtils::StringHash hash, f64 value) override final;
-
     void SetIntCVar(StringUtils::StringHash hash, i32 value) override final;
-
     void SetStringCVar(StringUtils::StringHash hash, const char* value) override final;
-
     void SetVecFloatCVar(StringUtils::StringHash hash, const vec4& value) override final;
-
     void SetVecIntCVar(StringUtils::StringHash hash, const ivec4& value) override final;
 
     void DrawImguiEditor() override final;
