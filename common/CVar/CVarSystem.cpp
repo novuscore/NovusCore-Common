@@ -23,6 +23,8 @@
 */
 
 #include "CVarSystem.h"
+#include "Utils/JsonConfig.h"
+
 #include <unordered_map>
 
 #include <array>
@@ -168,8 +170,8 @@ public:
     void SetVecIntCVar(StringUtils::StringHash hash, const ivec4& value) override final;
 
     void DrawImguiEditor() override final;
-    void LoadCVarsIntoJson(json& jsonConfig) override final;
-    void LoadCVarsFromJson(json& jsonConfig) override final;
+    void LoadCVarsIntoJson(json& jsonConfig);
+    void LoadCVarsFromJson(json& jsonConfig);
 
     void EditParameter(CVarParameter* p);
 

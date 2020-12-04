@@ -24,7 +24,7 @@
 #pragma once
 #include <NovusTypes.h>
 #include "Utils/StringUtils.h"
-#include <Utils/JsonConfig.h>
+
 
 class CVarParameter;
 
@@ -80,9 +80,7 @@ public:
     virtual CVarParameter* CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue) = 0;
 
     virtual void DrawImguiEditor() = 0;
-    virtual void LoadCVarsIntoJson(json& jsonConfig) = 0;
-    virtual void LoadCVarsFromJson(json& jsonConfig) = 0;
-
+	
     void MarkDirty() { _isDirty = true; }
     void ClearDirty() { _isDirty = false; }
     bool IsDirty() { return _isDirty; }
