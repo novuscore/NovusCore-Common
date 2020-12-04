@@ -79,7 +79,7 @@ public:
     {
         return _configFile[keyName];
     }
-
+	
 private:
     json::value_type FindOptionInArray(std::string optionName, json::value_type value);
 
