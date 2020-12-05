@@ -726,7 +726,7 @@ void CVarSystemImpl::EditParameter(CVarParameter* p, float textWidth)
     const bool checkboxFlag = ((u32)p->flags & (u32)CVarFlags::EditCheckbox);
     const bool dragFlag = ((u32)p->flags & (u32)CVarFlags::EditFloatDrag);
 
-    //push the ID of the current parameter so that we can have empty labels with no conflicts
+    // push the ID of the current parameter so that we can have empty labels with no conflicts
     ImGui::PushID(p->name.c_str());
 
     switch (p->type)
@@ -818,5 +818,5 @@ void CVarSystemImpl::EditParameter(CVarParameter* p, float textWidth)
         ImGui::SetTooltip(p->description.c_str());
     }
 
-    ImGui::PushID(p->name.c_str());
+    ImGui::PopID();
 }
