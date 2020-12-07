@@ -57,4 +57,5 @@ using vec4 = glm::vec4;
 using ivec4 = glm::ivec4;
 using uvec4 = glm::uvec4;
 using hvec4 = glm::vec<4, f16>;
+using mat3x3 = glm::mat3x3;
 using mat4x4 = glm::mat4x4;

@@ -32,7 +32,7 @@ namespace Geometry
         f32 GetSteepnessAngle()
         {
             vec3 normal = glm::normalize(GetNormal());
-            f32 flatness = glm::abs(glm::dot(normal, vec3(0, 1, 0)));
+            f32 flatness = glm::abs(glm::dot(normal, vec3(0, 0, 1)));
             return glm::degrees(acos(flatness));
         }
     };
