@@ -150,6 +150,7 @@ namespace ShaderCooker
             L"-Zpr",            //Row-major matrices
             L"-WX",             //Warnings as errors
             L"-enable-16bit-types", // Enable 16 bit types
+            L"-fspv-target-env=vulkan1.1", // Target Vulkan 1.1
     #ifdef _DEBUG
             L"-Zi",             //Debug info
             //L"-Qembed_debug", //Embed debug info into the shader
