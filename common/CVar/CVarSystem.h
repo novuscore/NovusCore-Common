@@ -68,7 +68,6 @@ public:
 
     virtual void SetVecIntCVar(StringUtils::StringHash hash,const ivec4& value) = 0;
 
-    
     virtual CVarParameter* CreateFloatCVar(const char* name, const char* description, f64 defaultValue, f64 currentValue) = 0;
    
     virtual CVarParameter* CreateIntCVar(const char* name, const char* description, i32 defaultValue, i32 currentValue) = 0;

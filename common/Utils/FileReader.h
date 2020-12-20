@@ -7,7 +7,7 @@
 class FileReader
 {
 public:
-    FileReader(std::string path, std::string fileName) : _path(path), _fileName(fileName), _length(0) {}
+    FileReader(std::string& path, std::string& fileName) : _path(path), _fileName(fileName), _length(0) {}
     ~FileReader() { Close(); }
 
     bool Open()

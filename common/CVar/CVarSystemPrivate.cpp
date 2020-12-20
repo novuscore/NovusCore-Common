@@ -68,7 +68,6 @@ CVarSystem* CVarSystem::Get()
     return &cvarSys;
 }
 
-
 CVarParameter* CVarSystemImpl::GetCVar(StringUtils::StringHash hash)
 {
     std::shared_lock lock(mutex_);
@@ -106,7 +105,6 @@ void CVarSystemImpl::SetVecIntCVar(StringUtils::StringHash hash, const ivec4& va
 {
     SetCVarCurrent<ivec4>(hash, value);
 }
-
 
 CVarParameter* CVarSystemImpl::CreateFloatCVar(const char* name, const char* description, f64 defaultValue, f64 currentValue)
 {
@@ -158,7 +156,6 @@ CVarParameter* CVarSystemImpl::CreateVecFloatCVar(const char* name, const char* 
 
     return param;
 }
-
 
 CVarParameter* CVarSystemImpl::CreateVecIntCVar(const char* name, const char* description, const ivec4& defaultValue, const ivec4& currentValue)
 {
@@ -330,18 +327,22 @@ void CVarSystemImpl::DrawImguiEditor()
     {
         addToEditList(GetCVarArray<i32>()->cvars[i].parameter);
     }
+
     for (int i = 0; i < GetCVarArray<f64>()->lastCVar; i++)
     {
         addToEditList(GetCVarArray<f64>()->cvars[i].parameter);
     }
+
     for (int i = 0; i < GetCVarArray<std::string>()->lastCVar; i++)
     {
         addToEditList(GetCVarArray<std::string>()->cvars[i].parameter);
     }
+
     for (int i = 0; i < GetCVarArray<vec4>()->lastCVar; i++)
     {
         addToEditList(GetCVarArray<vec4>()->cvars[i].parameter);
     }
+
     for (int i = 0; i < GetCVarArray<ivec4>()->lastCVar; i++)
     {
         addToEditList(GetCVarArray<ivec4>()->cvars[i].parameter);
@@ -396,7 +397,6 @@ void CVarSystemImpl::DrawImguiEditor()
                     maxTextWidth = std::max(maxTextWidth, ImGui::CalcTextSize(p->name.c_str()).x);
                 }
 
-
                 for (auto p : parameters)
                 {
                     EditParameter(p, maxTextWidth);
@@ -420,7 +420,6 @@ void CVarSystemImpl::DrawImguiEditor()
         {
            maxTextWidth = std::max(maxTextWidth,  ImGui::CalcTextSize(p->name.c_str()).x);
         }
-       
 
         for (auto p : cachedEditParameters)
         {

@@ -129,9 +129,29 @@ public:
         readData += sizeof(f64);
         return true;
     }
-    inline void GetString(std::string& val)
+    inline bool GetString(char*& val)
     {
         assert(_data != nullptr);
+
+        if (!CanPerformRead(1))
+            return false;
+
+        val = reinterpret_cast<char*>(&_data[readData]);
+        while (readData < size)
+        {
+            char c = _data[readData++];
+            if (c == 0)
+                break;
+        }
+
+        return true;
+    }
+    inline bool GetString(std::string& val)
+    {
+        assert(_data != nullptr);
+
+        if (!CanPerformRead(1))
+            return false;
 
         val.clear();
         while (readData < size)
@@ -142,20 +162,31 @@ public:
 
             val += c;
         }
+
+        return true;
     }
-    inline void GetString(std::string& val, i32 size)
+    inline bool GetString(std::string& val, i32 size)
     {
         assert(_data != nullptr);
 
+        if (!CanPerformRead(size))
+            return false;
+
         val.clear();
+
         for (i32 i = 0; i < size; i++)
         {
             val += _data[readData++];
         }
+
+        return true;
     }
-    inline void GetStringByOffset(std::string& val, size_t offset)
+    inline bool GetStringByOffset(std::string& val, size_t offset)
     {
         assert(_data != nullptr);
+
+        if (!CanPerformRead(1, offset))
+            return false;
 
         val.clear();
         while (offset < size)
@@ -166,16 +197,24 @@ public:
 
             val += c;
         }
+
+        return true;
     }
-    inline void GetStringByOffset(std::string& val, i32 size, size_t offset)
+    inline bool GetStringByOffset(std::string& val, i32 size, size_t offset)
     {
         assert(_data != nullptr);
 
+        if (!CanPerformRead(size, offset))
+            return false;
+
         val.clear();
+
         for (i32 i = 0; i < size; i++)
         {
             val += _data[offset++];
         }
+
+        return true;
     }
 
     template <typename T>
@@ -364,6 +403,15 @@ public:
 
         delete[] _data;
         _data = newArr;
+    }    
+    
+    inline bool CanPerformRead(size_t inSize)
+    {
+        return readData + inSize <= size;
+    }
+    inline bool CanPerformRead(size_t inSize, size_t offset)
+    {
+        return offset + inSize <= size;
     }
 
     inline void SetOwnership(bool hasOwnership) { _hasOwnership = hasOwnership; }

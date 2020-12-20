@@ -83,7 +83,8 @@ bool StringTable::Serialize(DynamicBytebuffer* bytebuffer) const
     }
 
     // Then we push this value into the byteBuffer
-    bytebuffer->Put<u32>(totalSize);
+    if (!bytebuffer->Put<u32>(totalSize))
+        return false;
 
     // Then we go ahead and put each string
     for (const auto& string : _strings)
@@ -103,6 +104,10 @@ bool StringTable::Deserialize(Bytebuffer* bytebuffer)
         assert(false);
         return false;
     }
+
+    if (totalSize > bytebuffer->GetReadSpace())
+        return false;
+
     if (totalSize == 0)
         return true;
 
@@ -110,7 +115,8 @@ bool StringTable::Deserialize(Bytebuffer* bytebuffer)
     u32 readSize = 0;
     while(readSize < totalSize)
     {
-        bytebuffer->GetString(string);
+        if (!bytebuffer->GetString(string))
+            return false;
 
         u32 hashedString = StringUtils::fnv1a_32(string.c_str(), string.size());
         _strings.push_back(string);
@@ -130,6 +136,10 @@ bool StringTable::Deserialize(DynamicBytebuffer* bytebuffer)
         assert(false);
         return false;
     }
+
+    if (totalSize > bytebuffer->GetReadSpace())
+        return false;
+
     if (totalSize == 0)
         return true;
 
@@ -137,7 +147,8 @@ bool StringTable::Deserialize(DynamicBytebuffer* bytebuffer)
     u32 readSize = 0;
     while(readSize < totalSize)
     {
-        bytebuffer->GetString(string);
+        if (!bytebuffer->GetString(string))
+            return false;
 
         u32 hashedString = StringUtils::fnv1a_32(string.c_str(), string.size());
         _strings.push_back(string);

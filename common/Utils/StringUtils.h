@@ -122,11 +122,11 @@ struct StringHash
     {
         computedHash = fnv1a_32(s, const_strlen(s));
     }
-    constexpr StringHash(const char* s, std::size_t count)noexcept : computedHash(0)
+    constexpr StringHash(const char* s, std::size_t count) noexcept : computedHash(0)
     {
         computedHash = fnv1a_32(s, count);
     }
-    constexpr StringHash(std::string_view s)noexcept : computedHash(0)
+    constexpr StringHash(std::string_view s) noexcept : computedHash(0)
     {
         computedHash = fnv1a_32(s.data(),s.size());
     }
