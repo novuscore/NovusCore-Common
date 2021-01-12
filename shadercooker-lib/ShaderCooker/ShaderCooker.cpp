@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
+#include <cwctype>
 
 #include <Utils/DebugHandler.h>
 #include <Utils/StringUtils.h>
@@ -165,9 +166,20 @@ namespace ShaderCooker
         // TODO: Permutations
 
         std::wstring profile;
-        if (!GetProfileFromFilename(path.filename(), profile))
+        std::wstring profileType;
+        if (!GetProfileFromFilename(path.filename(), profile, profileType))
         {
             return;
+        }
+
+        // Set this profiles SHADER_*PROFILE* to 1
+        std::wstring profileDefineName = L"SHADER_" + profileType;
+        std::transform(profileDefineName.begin(), profileDefineName.end(), profileDefineName.begin(), std::towupper);
+
+        for (DxcDefine& define : defines)
+        {
+            if (define.Name == profileDefineName)
+                define.Value = L"1";
         }
 
         Microsoft::WRL::ComPtr<IDxcOperationResult> compileResult;
@@ -202,6 +214,20 @@ namespace ShaderCooker
         // TODO: Success message with time taken
     }
 
+    constexpr char* validProfilesArray[9] =
+    {
+        "ps", // Pixel Shader
+        "vs", // Vertex Shader
+        "gs", // Geometry Shader
+        "hs", // Hull shader
+        "ds", // Domain shader
+        "cs", // Compute Shader
+        "lib", // Libraries, used for raytracing
+        "ms", // Mesh Shader
+        "as" // Amplification Shader (used with Mesh Shaders)
+    };
+    constexpr char* defaultProfileVersion = "_6_5";
+
     DxcDefine MakeDefine(const std::wstring& name, const std::wstring& value)
     {
         DxcDefine define;
@@ -223,24 +249,20 @@ namespace ShaderCooker
         defines.push_back(MakeDefine(L"PER_PASS", L"1"));
         defines.push_back(MakeDefine(L"PER_DRAW", L"2"));
 
+        // Define all SHADER_*PROFILE* to 0
+        for (const char* profile : validProfilesArray)
+        {
+            std::wstring profileWString = StringUtils::StringToWString(std::string(profile));
+            std::wstring profileName = L"SHADER_" + profileWString;
+            std::transform(profileName.begin(), profileName.end(), profileName.begin(), std::towupper);
+
+            defines.push_back(MakeDefine(profileName, L"0"));
+        }
+
         return defines;
     }
 
-    constexpr char* validProfilesArray[9] =
-    {
-        "ps", // Pixel Shader
-        "vs", // Vertex Shader
-        "gs", // Geometry Shader
-        "hs", // Hull shader
-        "ds", // Domain shader
-        "cs", // Compute Shader
-        "lib", // Libraries, used for raytracing
-        "ms", // Mesh Shader
-        "as" // Amplification Shader (used with Mesh Shaders)
-    };
-    constexpr char* defaultProfileVersion = "_6_5";
-
-    bool ShaderCooker::GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile)
+    bool ShaderCooker::GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile, std::wstring& profileType)
     {
         static std::string validProfiles = "";
 
@@ -295,6 +317,8 @@ namespace ShaderCooker
             NC_LOG_ERROR("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
             return false;
         }
+
+        profileType = StringUtils::StringToWString(extension);
 
         extension = extension.append(defaultProfileVersion); // Turns the string from "vs" to "vs_6_5" or whatever version we set in defaultProfileVersion
         profile = StringUtils::StringToWString(extension);

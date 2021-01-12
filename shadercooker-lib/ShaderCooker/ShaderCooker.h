@@ -24,7 +24,7 @@ namespace ShaderCooker
 
     private:
         std::vector<DxcDefine> GetDefaultDefines();
-        bool GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile);
+        bool GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile, std::wstring& profileType);
 
     private:
         IncludeHandler* _includeHandler;
