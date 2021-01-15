@@ -99,6 +99,47 @@ inline i32 FormatString(char* buffer, size_t bufferSize, char const* format, Arg
     return length;
 }
 
+inline std::string FormatThousandSeparator(int n)
+{
+    std::string ans = "";
+
+    // Convert the given integer
+    // to equivalent string
+    std::string num = std::to_string(n);
+
+    // Initialise count
+    i32 count = 0;
+
+    // Traverse the string in reverse
+    for (i32 i = static_cast<i32>(num.size()) - 1; i >= 0; i--)
+    {
+        count++;
+        ans.push_back(num[i]);
+
+        // If three characters
+        // are traversed
+        if (count == 3)
+        {
+            ans.push_back(',');
+            count = 0;
+        }
+    }
+
+    // Reverse the string to get
+    // the desired output
+    std::reverse(ans.begin(), ans.end());
+
+    // If the given string is
+    // less than 1000
+    if (ans.size() % 4 == 0)
+    {
+        // Remove ','
+        ans.erase(ans.begin());
+    }
+
+    return ans;
+}
+
 // FNV-1a 32bit hashing algorithm.
 constexpr u32 fnv1a_32(char const* s, std::size_t count)
 {
