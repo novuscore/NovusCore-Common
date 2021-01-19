@@ -116,18 +116,20 @@ namespace ShaderCooker
         _includeHandler->AddIncludeDirectory(path);
     }
 
-    void ShaderCooker::CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize)
+    bool ShaderCooker::CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize)
     {
         path.make_preferred();
 
         if (!fs::exists(path))
         {
             NC_LOG_FATAL("The path provided does not exists: %s", path.c_str());
+            return false;
         }
 
         if (fs::is_directory(path))
         {
             NC_LOG_FATAL("The path provided is a directory, not a file: %s", path.c_str());
+            return false;
         }
 
         std::ifstream file(path);
@@ -142,6 +144,7 @@ namespace ShaderCooker
         if (r != S_OK)
         {
             NC_LOG_FATAL("Could not load shader blob");
+            return false;
         }
 
         const wchar_t* args[] =
@@ -169,7 +172,7 @@ namespace ShaderCooker
         std::wstring profileType;
         if (!GetProfileFromFilename(path.filename(), profile, profileType))
         {
-            return;
+            return false;
         }
 
         // Set this profiles SHADER_*PROFILE* to 1
@@ -187,11 +190,13 @@ namespace ShaderCooker
         if (r != S_OK)
         {
             NC_LOG_FATAL("Compiler would not even give us back a result");
+            return false;
         }
 
         if (compileResult->GetStatus(&r) != S_OK)
         {
             NC_LOG_FATAL("Compiler gave us something but we could not get a result from it");
+            return false;
         }
 
         if (r < 0)
@@ -200,9 +205,11 @@ namespace ShaderCooker
             if (compileResult->GetErrorBuffer(printBlob.GetAddressOf()) != S_OK)
             {
                 NC_LOG_FATAL("Compiler gave us an error, but we could not get the text from it");
+                return false;
             }
 
             NC_LOG_ERROR("%s\n", (const char*)printBlob->GetBufferPointer());
+            return false;
         }
 
         IDxcBlob* resultBlob;
@@ -211,7 +218,7 @@ namespace ShaderCooker
         blob = (char*)resultBlob->GetBufferPointer();
         blobSize = resultBlob->GetBufferSize();
 
-        // TODO: Success message with time taken
+        return true;
     }
 
     constexpr char* validProfilesArray[9] =

@@ -20,7 +20,7 @@ namespace ShaderCooker
         ~ShaderCooker();
 
         void AddIncludeDir(std::filesystem::path path);
-        void CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize);
+        bool CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize);
 
     private:
         std::vector<DxcDefine> GetDefaultDefines();
