@@ -3,13 +3,13 @@
 
 namespace Math
 {
-float Sqrt(float in)
-{
-    return sqrt(in);
-}
+    float Sqrt(float in)
+    {
+        return sqrt(in);
+    }
 
-float Tan(float in)
-{
-    return tan(in);
+    float Tan(float in)
+    {
+        return tan(in);
+    }
 }
-} // namespace Math

@@ -51,16 +51,16 @@ CPUInfo& CPUInfo::Get()
 
 void CPUInfo::Print()
 {
-    NC_LOG_MESSAGE("[CPUInfo]: %s", _prettyName.c_str());
+    DebugHandler::Print("[CPUInfo]: %s", _prettyName.c_str());
 
-    NC_LOG_MESSAGE("[CPUInfo]: Supports Hyperthreading: %s", _isHTT ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports SSE: %s", _isSSE ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports SSE2: %s", _isSSE2 ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports SSE3: %s", _isSSE3 ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports SSE4.1: %s", _isSSE41 ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports SSE4.2: %s", _isSSE42 ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports AVX: %s", _isAVX ? "yes" : "no");
-    NC_LOG_MESSAGE("[CPUInfo]: Supports AVX2: %s", _isAVX2 ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports Hyperthreading: %s", _isHTT ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports SSE: %s", _isSSE ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports SSE2: %s", _isSSE2 ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports SSE3: %s", _isSSE3 ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports SSE4.1: %s", _isSSE41 ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports SSE4.2: %s", _isSSE42 ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports AVX: %s", _isAVX ? "yes" : "no");
+    DebugHandler::Print("[CPUInfo]: Supports AVX2: %s", _isAVX2 ? "yes" : "no");
 }
 
 static inline void rtrim(std::string& s) 
@@ -171,7 +171,7 @@ CPUInfo::CPUInfo()
     }
     else 
     {
-        NC_LOG_FATAL("Unexpected vendor id (%s)", upVId.c_str());
+        DebugHandler::PrintFatal("Unexpected vendor id (%s)", upVId.c_str());
     }
 
     // Get processor brand string

@@ -94,13 +94,13 @@ namespace ShaderCooker
         r = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(_utils.GetAddressOf()));
         if (r != S_OK)
         {
-            NC_LOG_FATAL("Failed to create DXC Utils");
+            DebugHandler::PrintFatal("Failed to create DXC Utils");
         }
 
         r = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(_compiler.GetAddressOf()));
         if (r != S_OK)
         {
-            NC_LOG_FATAL("Failed to create DXC Compiler");
+            DebugHandler::PrintFatal("Failed to create DXC Compiler");
         }
 
         _includeHandler = new IncludeHandler(_utils.Get());
@@ -122,13 +122,13 @@ namespace ShaderCooker
 
         if (!fs::exists(path))
         {
-            NC_LOG_FATAL("The path provided does not exists: %s", path.c_str());
+            DebugHandler::PrintFatal("The path provided does not exists: %s", path.c_str());
             return false;
         }
 
         if (fs::is_directory(path))
         {
-            NC_LOG_FATAL("The path provided is a directory, not a file: %s", path.c_str());
+            DebugHandler::PrintFatal("The path provided is a directory, not a file: %s", path.c_str());
             return false;
         }
 
@@ -143,7 +143,7 @@ namespace ShaderCooker
 
         if (r != S_OK)
         {
-            NC_LOG_FATAL("Could not load shader blob");
+            DebugHandler::PrintFatal("Could not load shader blob");
             return false;
         }
 
@@ -189,13 +189,13 @@ namespace ShaderCooker
         r = _compiler->Compile(sourceBlob.Get(), path.filename().c_str(), L"main", profile.c_str(), &args[0], sizeof(args) / sizeof(args[0]), defines.data(), static_cast<u32>(defines.size()), _includeHandler, compileResult.GetAddressOf());
         if (r != S_OK)
         {
-            NC_LOG_FATAL("Compiler would not even give us back a result");
+            DebugHandler::PrintFatal("Compiler would not even give us back a result");
             return false;
         }
 
         if (compileResult->GetStatus(&r) != S_OK)
         {
-            NC_LOG_FATAL("Compiler gave us something but we could not get a result from it");
+            DebugHandler::PrintFatal("Compiler gave us something but we could not get a result from it");
             return false;
         }
 
@@ -204,11 +204,11 @@ namespace ShaderCooker
             Microsoft::WRL::ComPtr<IDxcBlobEncoding> printBlob;
             if (compileResult->GetErrorBuffer(printBlob.GetAddressOf()) != S_OK)
             {
-                NC_LOG_FATAL("Compiler gave us an error, but we could not get the text from it");
+                DebugHandler::PrintFatal("Compiler gave us an error, but we could not get the text from it");
                 return false;
             }
 
-            NC_LOG_ERROR("%s\n", (const char*)printBlob->GetBufferPointer());
+            DebugHandler::PrintError("%s\n", (const char*)printBlob->GetBufferPointer());
             return false;
         }
 
@@ -294,7 +294,7 @@ namespace ShaderCooker
 
         if (!withoutHlsl.has_extension())
         {
-            NC_LOG_ERROR("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
+            DebugHandler::PrintError("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
 
             return false;
         }
@@ -303,7 +303,7 @@ namespace ShaderCooker
 
         if (extension.length() != 2 && extension.length() != 3)
         {
-            NC_LOG_ERROR("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
+            DebugHandler::PrintError("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
 
             return false;
         }
@@ -321,7 +321,7 @@ namespace ShaderCooker
 
         if (!isValidProfile)
         {
-            NC_LOG_ERROR("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
+            DebugHandler::PrintError("Filename \"%s\" should end with .XX.hlsl where XX is one of these valid profiles depending on shader type: %s", filename.string(), validProfiles);
             return false;
         }
 

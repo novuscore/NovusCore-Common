@@ -1,7 +1,7 @@
 /*
 	MIT License
 
-	Copyright (c) 2018-2019 NovusCore
+	Copyright (c) 2018-2021 NovusCore
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,13 @@
 */
 #pragma once
 #include <cstdint>
-#include <memory>
-#include <string>
 
-#include <glm/glm.hpp>
-#include <glm/detail/type_half.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat3x3.hpp>
+#include <glm/mat4x4.hpp>
+
 #include "Math/Math.h"
 #include "Math/Color.h"
 #include "Math/Half.h"

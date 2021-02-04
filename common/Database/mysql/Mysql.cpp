@@ -12,12 +12,12 @@ bool Mysql::Initialize(std::string charset /* = "utf8" */)
         // Require MYSQL 5.6 or higher
         if (MYSQL_VERSION_ID < 50600)
         {
-            NC_LOG_FATAL("MYSQL_VERSION_ID(%i) needs to be at least 50600 or higher", MYSQL_VERSION_ID);
+            DebugHandler::PrintFatal("MYSQL_VERSION_ID(%i) needs to be at least 50600 or higher", MYSQL_VERSION_ID);
         }
 
         if (mysql_library_init(0, nullptr, nullptr))
         {
-            NC_LOG_FATAL("Failed to initialize MySQL client");
+            DebugHandler::PrintFatal("Failed to initialize MySQL client");
         }
 
         _mysqlInitialized = true;
@@ -52,7 +52,7 @@ bool Mysql::RawQuery(const std::string stmt)
 {
     if (mysql_query(_mysql, stmt.c_str()))
     {
-        NC_LOG_ERROR("SQL(%u): %s", mysql_errno(_mysql), mysql_error(_mysql));
+         DebugHandler::PrintError("SQL(%u): %s", mysql_errno(_mysql), mysql_error(_mysql));
         return false;
     }
 
@@ -62,7 +62,7 @@ bool Mysql::RawRealQuery(const char* stmt, i32 length)
 {
     if (mysql_real_query(_mysql, stmt, length))
     {
-        NC_LOG_ERROR("SQL(%u): %s", mysql_errno(_mysql), mysql_error(_mysql));
+         DebugHandler::PrintError("SQL(%u): %s", mysql_errno(_mysql), mysql_error(_mysql));
         return false;
     }
 

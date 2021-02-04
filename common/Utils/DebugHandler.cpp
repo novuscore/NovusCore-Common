@@ -1,23 +1,51 @@
 #include "DebugHandler.h"
 
-bool DebugHandler::isInitialized = false;
-#ifdef _WIN32
-u32 DebugHandler::_defaultColor = NULL;
-HANDLE DebugHandler::_handle = NULL;
+#include <cassert>
+
+#if defined(_WIN32)
+#include <Windows.h>
 #endif
+
+bool DebugHandler::_isInitialized = false;
+IDebugHandlerData* DebugHandler::_data = nullptr;
+
+struct DebugHandlerData : IDebugHandlerData
+{
+    HANDLE handle;
+    u32 defaultColor;
+};
 
 void DebugHandler::Initialize()
 {
+    DebugHandlerData* data = new DebugHandlerData();
+    _data = data;
+
 #ifdef _WIN32
-    _handle = GetStdHandle(STD_OUTPUT_HANDLE); // MAYBE this instead: GetConsoleWindow();
+    data->handle = GetStdHandle(STD_OUTPUT_HANDLE); // MAYBE this instead: GetConsoleWindow();
     CONSOLE_SCREEN_BUFFER_INFO info;
 
-    if (!GetConsoleScreenBufferInfo(_handle, &info))
+    if (!GetConsoleScreenBufferInfo(data->handle, &info))
     {
         //assert(false);
     }
 
-    _defaultColor = info.wAttributes;
+    data->defaultColor = info.wAttributes;
 #endif
-    isInitialized = true;
+    _isInitialized = true;
+}
+
+void DebugHandler::PushColor(ColorCode color)
+{
+    DebugHandlerData* data = static_cast<DebugHandlerData*>(_data);
+#ifdef _WIN32
+    SetConsoleTextAttribute(data->handle, color);
+#endif
+}
+
+void DebugHandler::PopColor()
+{
+    DebugHandlerData* data = static_cast<DebugHandlerData*>(_data);
+#ifdef _WIN32
+    SetConsoleTextAttribute(data->handle, data->defaultColor);
+#endif
 }

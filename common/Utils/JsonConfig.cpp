@@ -9,7 +9,7 @@ bool JsonConfig::Load(const fs::path& configPath)
     std::ifstream configFile(configPath, std::ifstream::in);
     if (!configFile)
     {
-        NC_LOG_ERROR("Failed to open %s. Check admin permissions", configPath.filename().string().c_str());
+         DebugHandler::PrintError("Failed to open %s. Check admin permissions", configPath.filename().string().c_str());
         return false;
     }
 
@@ -18,11 +18,11 @@ bool JsonConfig::Load(const fs::path& configPath)
 
     if (_configFile.size() == 0)
     {
-        NC_LOG_FATAL("Failed to initialize config file, found 0 configurations.");
+        DebugHandler::PrintFatal("Failed to initialize config file, found 0 configurations.");
         return false;
     }
 
-    NC_LOG_SUCCESS("Loaded config file: '%s'", configPath.filename().string().c_str());
+    DebugHandler::PrintSuccess("Loaded config file: '%s'", configPath.filename().string().c_str());
     return true;
 }
 
@@ -33,7 +33,7 @@ bool JsonConfig::LoadOrCreate(const fs::path& configPath, json& configDefault)
         std::ofstream configStream(configPath, std::ofstream::out);
         if (!configStream)
         {
-            NC_LOG_ERROR("Failed to create json config file. Check admin permissions");
+             DebugHandler::PrintError("Failed to create json config file. Check admin permissions");
             return false;
         }
        
@@ -49,7 +49,7 @@ bool JsonConfig::Save(const fs::path& configPath)
     std::ofstream configFile(configPath);
     if (!configFile)
     {
-        NC_LOG_ERROR("Failed to save %s. Check admin permissions", configPath.filename().string().c_str());
+         DebugHandler::PrintError("Failed to save %s. Check admin permissions", configPath.filename().string().c_str());
         return false;
     }
 

@@ -32,7 +32,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__ );
+            DebugHandler::PrintError("SQL Field: Called Field::%s on null field", __func__ );
         }
 
         i8 value = 0;
@@ -41,7 +41,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -50,7 +50,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__ );
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__ );
         }
 
         u8 value = 0;
@@ -59,7 +59,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -68,7 +68,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__ );
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__ );
         }
 
         i16 value = 0;
@@ -77,7 +77,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -86,7 +86,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__ );
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__ );
         }
 
         u16 value = 0;
@@ -95,7 +95,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -104,7 +104,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__);
         }
 
         i32 value = 0;
@@ -113,7 +113,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -122,7 +122,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__);
         }
 
         u32 value = 0;
@@ -131,7 +131,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -140,7 +140,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__);
         }
 
         f32 value = 0;
@@ -149,7 +149,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -158,7 +158,7 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__);
         }
 
         f64 value = 0;
@@ -167,7 +167,7 @@ public:
 
         if (!ss)
         {
-            NC_LOG_ERROR("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
+             DebugHandler::PrintError("SQL Field: Conversion failed for (Table: %s, Column: %s) during %s", _field->table, _field->name, __func__);
         }
 
         return value;
@@ -176,12 +176,12 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__);
         }
 
         if (!IsBinary())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on non-binary field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on non-binary field", __func__);
         }
 
         return std::string(_data);
@@ -190,12 +190,12 @@ public:
     {
         if (IsNull())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on null field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on null field", __func__);
         }
 
         if (!IsBinary())
         {
-            NC_LOG_FATAL("SQL Field: Called Field::%s on non-binary field", __func__);
+            DebugHandler::PrintFatal("SQL Field: Called Field::%s on non-binary field", __func__);
         }
 
         /* 

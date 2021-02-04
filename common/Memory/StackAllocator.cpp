@@ -97,7 +97,7 @@ namespace Memory
 
         if (_offset + padding + size > _totalSize) 
         {
-            NC_LOG_FATAL("We overflowed our allocator");
+            DebugHandler::PrintFatal("We overflowed our allocator");
 
             return nullptr;
         }
