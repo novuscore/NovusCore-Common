@@ -119,6 +119,18 @@ namespace StringUtils
         return ans;
     }
 
+    bool BeginsWith(std::string const& fullString, std::string const& beginning)
+    {
+        if (fullString.length() >= beginning.length())
+        {
+            return (0 == fullString.compare(0, beginning.length(), beginning));
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     bool EndsWith(std::string const& fullString, std::string const& ending)
     {
         if (fullString.length() >= ending.length())
@@ -129,6 +141,11 @@ namespace StringUtils
         {
             return false;
         }
+    }
+
+    bool Contains(std::string const& fullString, std::string const& substring)
+    {
+        return fullString.find(substring) != std::string::npos;
     }
 
 #ifdef _WINDOWS

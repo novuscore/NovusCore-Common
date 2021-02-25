@@ -15,7 +15,10 @@ namespace StringUtils
     std::vector<std::string> SplitString(std::string string, char delim = ' ');
     std::string EscapeString(std::string const& string);
     std::string FormatThousandSeparator(i32 n);
+
+    bool BeginsWith(std::string const& fullString, std::string const& beginning);
     bool EndsWith(std::string const& fullString, std::string const& ending);
+    bool Contains(std::string const& fullString, std::string const& substring);
 
 #ifdef _WINDOWS
     std::wstring StringToWString(const std::string& s);
@@ -40,6 +43,20 @@ namespace StringUtils
     constexpr u32 fnv1a_32(char const* s, std::size_t count)
     {
         return ((count ? fnv1a_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
+    }
+
+    // DJB2 32bit hashing algorithm.
+    constexpr uint32_t hash_djb2(const char* str, size_t size)
+    {
+        uint32_t hash = 5381;
+
+        for (size_t i = 0; i < size; i++)
+        {
+            int c = str[i];
+            hash = ((hash << 5) + hash) ^ c;
+        }
+
+        return hash;
     }
 
     constexpr size_t const_strlen(const char* s)
@@ -80,4 +97,8 @@ namespace StringUtils
 constexpr StringUtils::StringHash operator"" _h(char const* s, std::size_t count)
 {
     return StringUtils::StringHash{ s,count };
+}
+constexpr unsigned int operator"" _djb2(char const* s, std::size_t count)
+{
+    return static_cast<unsigned int>(StringUtils::hash_djb2(s, static_cast<int>(count)));
 }

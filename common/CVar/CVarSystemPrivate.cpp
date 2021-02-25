@@ -698,7 +698,7 @@ void CVarSystemImpl::LoadCVarsFromJson(json& jsonConfig)
 void Label(const char* label, float textWidth)
 {
     constexpr float Slack = 50;
-    constexpr float EditorWidth = 100;
+    constexpr float EditorWidth = 200;
 
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     const ImVec2 lineStart = ImGui::GetCursorScreenPos();
