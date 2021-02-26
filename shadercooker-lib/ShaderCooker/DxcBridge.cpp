@@ -1,15 +1,35 @@
-#include "ShaderCooker.h"
+#include "DxcBridge.h"
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
 #include <cwctype>
-
 #include <Utils/DebugHandler.h>
 #include <Utils/StringUtils.h>
 
+#include "Lexer/Lexer.h"
+#include "Parser/Parser.h"
+
+// NOTE: This will need edits to add Linux support to ShaderCooker
+#ifdef _WINDOWS
+#include <wrl/client.h>
+#endif
+#include "dxcapi.h"
+
 namespace fs = std::filesystem;
+
+DxcDefine MakeDefine(const std::wstring& name, const std::wstring& value)
+{
+    DxcDefine define;
+    define.Name = new wchar_t[name.size() + 1];
+    wmemcpy((wchar_t*)define.Name, name.c_str(), name.size() + 1);
+
+    define.Value = new wchar_t[value.size() + 1];
+    wmemcpy((wchar_t*)define.Value, value.c_str(), value.size() + 1);
+
+    return define;
+}
 
 namespace ShaderCooker
 {
@@ -87,59 +107,101 @@ namespace ShaderCooker
         std::vector<fs::path> _includeDirectories;
     };
 
-    ShaderCooker::ShaderCooker()
+    struct DxcBridgeData : IDxcBridgeData
     {
+        std::vector<DxcDefine> extraDefines;
+
+        Microsoft::WRL::ComPtr<IDxcUtils> utils;
+        Microsoft::WRL::ComPtr<IDxcCompiler> compiler;
+    };
+
+    DxcBridge::DxcBridge()
+    {
+        DxcBridgeData* data = new DxcBridgeData();
+        _data = data;
+
         HRESULT r;
 
-        r = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(_utils.GetAddressOf()));
+        r = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(data->utils.GetAddressOf()));
         if (r != S_OK)
         {
             DebugHandler::PrintFatal("Failed to create DXC Utils");
         }
 
-        r = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(_compiler.GetAddressOf()));
+        r = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(data->compiler.GetAddressOf()));
         if (r != S_OK)
         {
             DebugHandler::PrintFatal("Failed to create DXC Compiler");
         }
 
-        _includeHandler = new IncludeHandler(_utils.Get());
+        _includeHandler = new IncludeHandler(data->utils.Get());
     }
 
-    ShaderCooker::~ShaderCooker()
+    DxcBridge::~DxcBridge()
     {
         _includeHandler->Release();
     }
 
-    void ShaderCooker::AddIncludeDir(std::filesystem::path path)
+    void DxcBridge::AddDefine(DxcDefine* define)
+    {
+        DxcBridgeData* data = static_cast<DxcBridgeData*>(_data);
+        data->extraDefines.push_back(*define);
+    }
+
+    void DxcBridge::ClearDefines()
+    {
+        DxcBridgeData* data = static_cast<DxcBridgeData*>(_data);
+        data->extraDefines.clear();
+    }
+
+    void DxcBridge::AddIncludeDir(std::filesystem::path path)
     {
         _includeHandler->AddIncludeDirectory(path);
     }
 
-    bool ShaderCooker::CompileFile(std::filesystem::path path, char*& blob, size_t& blobSize)
+    constexpr char* validProfilesArray[9] =
     {
-        path.make_preferred();
+        "ps", // Pixel Shader
+        "vs", // Vertex Shader
+        "gs", // Geometry Shader
+        "hs", // Hull shader
+        "ds", // Domain shader
+        "cs", // Compute Shader
+        "lib", // Libraries, used for raytracing
+        "ms", // Mesh Shader
+        "as" // Amplification Shader (used with Mesh Shaders)
+    };
+    constexpr char* defaultProfileVersion = "_6_5";
 
-        if (!fs::exists(path))
+    std::vector<DxcDefine> GetDefaultDefines()
+    {
+        std::vector<DxcDefine> defines;
+        defines.reserve(32);
+
+        defines.push_back(MakeDefine(L"GLOBAL", L"0"));
+        defines.push_back(MakeDefine(L"PER_PASS", L"1"));
+        defines.push_back(MakeDefine(L"PER_DRAW", L"2"));
+
+        // Define all SHADER_*PROFILE* to 0
+        for (const char* profile : validProfilesArray)
         {
-            DebugHandler::PrintFatal("The path provided does not exists: %s", path.c_str());
-            return false;
+            std::wstring profileWString = StringUtils::StringToWString(std::string(profile));
+            std::wstring profileName = L"SHADER_" + profileWString;
+            std::transform(profileName.begin(), profileName.end(), profileName.begin(), std::towupper);
+
+            defines.push_back(MakeDefine(profileName, L"0"));
         }
 
-        if (fs::is_directory(path))
-        {
-            DebugHandler::PrintFatal("The path provided is a directory, not a file: %s", path.c_str());
-            return false;
-        }
+        return defines;
+    }
 
-        std::ifstream file(path);
-        std::string source((std::istreambuf_iterator<char>(file)),
-            (std::istreambuf_iterator<char>()));
-        file.close();
+    bool DxcBridge::Compile(std::filesystem::path path, std::string& source, char*& blob, size_t& blobSize)
+    {
+        DxcBridgeData* data = static_cast<DxcBridgeData*>(_data);
 
         HRESULT r;
         Microsoft::WRL::ComPtr<IDxcBlobEncoding> sourceBlob;
-        r = _utils->CreateBlob(source.c_str(), static_cast<u32>(source.size()), CP_UTF8, sourceBlob.GetAddressOf());
+        r = data->utils->CreateBlob(source.c_str(), static_cast<u32>(source.length()), CP_UTF8, sourceBlob.GetAddressOf());
 
         if (r != S_OK)
         {
@@ -165,8 +227,7 @@ namespace ShaderCooker
         };
 
         std::vector<DxcDefine> defines = GetDefaultDefines();
-
-        // TODO: Permutations
+        std::vector<DxcDefine>& permutationDefines = data->extraDefines;
 
         std::wstring profile;
         std::wstring profileType;
@@ -185,8 +246,11 @@ namespace ShaderCooker
                 define.Value = L"1";
         }
 
+        // Merge default defines and permutation defines
+        defines.insert(defines.end(), permutationDefines.begin(), permutationDefines.end());
+
         Microsoft::WRL::ComPtr<IDxcOperationResult> compileResult;
-        r = _compiler->Compile(sourceBlob.Get(), path.filename().c_str(), L"main", profile.c_str(), &args[0], sizeof(args) / sizeof(args[0]), defines.data(), static_cast<u32>(defines.size()), _includeHandler, compileResult.GetAddressOf());
+        r = data->compiler->Compile(sourceBlob.Get(), path.filename().c_str(), L"main", profile.c_str(), &args[0], sizeof(args) / sizeof(args[0]), defines.data(), static_cast<u32>(defines.size()), _includeHandler, compileResult.GetAddressOf());
         if (r != S_OK)
         {
             DebugHandler::PrintFatal("Compiler would not even give us back a result");
@@ -221,55 +285,7 @@ namespace ShaderCooker
         return true;
     }
 
-    constexpr char* validProfilesArray[9] =
-    {
-        "ps", // Pixel Shader
-        "vs", // Vertex Shader
-        "gs", // Geometry Shader
-        "hs", // Hull shader
-        "ds", // Domain shader
-        "cs", // Compute Shader
-        "lib", // Libraries, used for raytracing
-        "ms", // Mesh Shader
-        "as" // Amplification Shader (used with Mesh Shaders)
-    };
-    constexpr char* defaultProfileVersion = "_6_5";
-
-    DxcDefine MakeDefine(const std::wstring& name, const std::wstring& value)
-    {
-        DxcDefine define;
-        define.Name = new wchar_t[name.size()];
-        wmemcpy((wchar_t*)define.Name, name.c_str(), name.size() + 1);
-
-        define.Value = new wchar_t[value.size()];
-        wmemcpy((wchar_t*)define.Value, value.c_str(), value.size() + 1);
-
-        return define;
-    }
-
-    std::vector<DxcDefine> ShaderCooker::GetDefaultDefines()
-    {
-        std::vector<DxcDefine> defines;
-        defines.reserve(32);
-
-        defines.push_back(MakeDefine(L"GLOBAL", L"0"));
-        defines.push_back(MakeDefine(L"PER_PASS", L"1"));
-        defines.push_back(MakeDefine(L"PER_DRAW", L"2"));
-
-        // Define all SHADER_*PROFILE* to 0
-        for (const char* profile : validProfilesArray)
-        {
-            std::wstring profileWString = StringUtils::StringToWString(std::string(profile));
-            std::wstring profileName = L"SHADER_" + profileWString;
-            std::transform(profileName.begin(), profileName.end(), profileName.begin(), std::towupper);
-
-            defines.push_back(MakeDefine(profileName, L"0"));
-        }
-
-        return defines;
-    }
-
-    bool ShaderCooker::GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile, std::wstring& profileType)
+    bool DxcBridge::GetProfileFromFilename(std::filesystem::path filename, std::wstring& profile, std::wstring& profileType)
     {
         static std::string validProfiles = "";
 
