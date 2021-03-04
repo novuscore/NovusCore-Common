@@ -178,9 +178,10 @@ namespace ShaderCooker
         std::vector<DxcDefine> defines;
         defines.reserve(32);
 
-        defines.push_back(MakeDefine(L"GLOBAL", L"0"));
-        defines.push_back(MakeDefine(L"PER_PASS", L"1"));
-        defines.push_back(MakeDefine(L"PER_DRAW", L"2"));
+        defines.push_back(MakeDefine(L"DEBUG", L"0"));
+        defines.push_back(MakeDefine(L"GLOBAL", L"1"));
+        defines.push_back(MakeDefine(L"PER_PASS", L"2"));
+        defines.push_back(MakeDefine(L"PER_DRAW", L"3"));
 
         // Define all SHADER_*PROFILE* to 0
         for (const char* profile : validProfilesArray)
