@@ -7,7 +7,7 @@ bool BufferRangeAllocator::Init(size_t bufferOffset, size_t bufferSize)
 
     _freeFrames.reserve(64);
 
-    BufferRangeFrame frame = _freeFrames.emplace_back();
+    BufferRangeFrame& frame = _freeFrames.emplace_back();
     frame.offset = bufferOffset;
     frame.size = bufferSize;
 
@@ -21,7 +21,7 @@ void BufferRangeAllocator::Reset()
 {
     _freeFrames.clear();
 
-    BufferRangeFrame frame = _freeFrames.emplace_back();
+    BufferRangeFrame& frame = _freeFrames.emplace_back();
     frame.offset = _currentOffset;
     frame.size = _currentSize;
 }
