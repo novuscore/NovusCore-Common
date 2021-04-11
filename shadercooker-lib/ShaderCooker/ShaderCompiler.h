@@ -43,6 +43,7 @@ namespace ShaderCooker
         void SetStage(Stage stage) { _stageInfo.stage = stage; }
 
         u32 GetNumCompiledShaders() { return _numCompiledShaders; }
+        u32 GetNumFailedShaders() { return _numFailedShaders; }
 
         void SetShouldForceCompile(bool shouldForceCompile) { _shouldForceCompile = shouldForceCompile; }
 
@@ -67,6 +68,7 @@ namespace ShaderCooker
         robin_hood::unordered_map<uint32_t, uint32_t> _shaderHashToIndex;
 
         u32 _numCompiledShaders = 0;
+        u32 _numFailedShaders = 0;
 
         struct StageState
         {

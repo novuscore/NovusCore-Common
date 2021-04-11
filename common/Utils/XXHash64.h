@@ -174,7 +174,7 @@ private:
     static const uint64_t MaxBufferSize = 31 + 1;
 
     uint64_t      state[4];
-    unsigned char buffer[MaxBufferSize];
+    unsigned char buffer[MaxBufferSize] = { 0 };
     unsigned int  bufferSize;
     uint64_t      totalLength;
 

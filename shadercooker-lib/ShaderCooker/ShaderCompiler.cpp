@@ -33,6 +33,7 @@ namespace ShaderCooker
         _shaderHashToPaths.clear();
         _shaderHashToIndex.clear();
         _numCompiledShaders = 0;
+        _numFailedShaders = 0;
 
         return true;
     }
@@ -400,6 +401,7 @@ namespace ShaderCooker
                         ofstream.write(blob, size);
                         ofstream.close();
                     }
+                    _numFailedShaders += static_cast<u32>(didFail);
 
                     if (numPermutations > 1)
                     {
