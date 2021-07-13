@@ -118,9 +118,9 @@ END_AS_NAMESPACE
 #ifndef WIN32_LEAN_AND_MEAN
   #define WIN32_LEAN_AND_MEAN
 #endif
-#ifndef _WIN32_WINNT
+/*#ifndef _WIN32_WINNT
   #define _WIN32_WINNT 0x0600 // We need this to get the declaration for Windows Phone compatible Ex functions
-#endif
+#endif*/
 #include <windows.h>
 #endif
 BEGIN_AS_NAMESPACE
