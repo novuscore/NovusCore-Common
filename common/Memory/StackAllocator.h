@@ -26,30 +26,32 @@
 #pragma once
 #include "../NovusTypes.h"
 #include "Allocator.h"
+#include <shared_mutex>
 
 namespace Memory
 {
     class StackAllocator : public Allocator
     {
     public:
-        StackAllocator(const std::size_t totalSize, std::string name = "", bool debug = false);
+        StackAllocator();
 
         virtual ~StackAllocator();
 
         virtual void* Allocate(const std::size_t size, const std::size_t alignment = 0) override;
+        virtual bool TryAllocate(const std::size_t size, const std::size_t alignment, void*& memory) override;
+        virtual size_t AllocateOffset(const std::size_t size, const std::size_t alignment = 0) override;
+        virtual bool TryAllocateOffset(const std::size_t size, const std::size_t alignment, size_t& offset) override;
+
         virtual void Free(void* ptr);
-        virtual void Init() override;
+        virtual void Init(const std::size_t totalSize, std::string name = "", bool onlyOffsets = false, bool debug = false) override;
         virtual void Reset();
 
     protected:
         void* _startPtr = nullptr;
-        std::size_t _offset;
+        std::atomic<std::size_t> _offset;
+        std::shared_mutex _lock;
 
     private:
         StackAllocator(StackAllocator& stackAllocator);
-        struct AllocationHeader 
-        {
-            char padding;
-        };
     };
 }

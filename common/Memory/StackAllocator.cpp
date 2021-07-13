@@ -33,28 +33,41 @@
 
 namespace Memory
 {
-    StackAllocator::StackAllocator(const std::size_t totalSize, std::string name, bool debug)
-        : Allocator(totalSize, name, debug) 
+    StackAllocator::StackAllocator()
+        : Allocator() 
     {
 
     }
 
-    void StackAllocator::Init() 
+    void StackAllocator::Init(const std::size_t totalSize, std::string name, bool onlyOffsets, bool debug)
     {
         assert(!_initialized); // We already initialized this allocator!
-        if (_startPtr != nullptr) 
+        
+        Allocator::Init(totalSize, name, onlyOffsets, debug);
+        
+        if (!_onlyOffset)
         {
-            free(_startPtr);
+            if (_startPtr != nullptr)
+            {
+                free(_startPtr);
+            }
+            _startPtr = malloc(_totalSize);
         }
-        _startPtr = malloc(_totalSize);
+        else
+        {
+            _startPtr = nullptr;
+        }
+        
         _offset = 0;
-
         _initialized = true;
     }
 
     StackAllocator::~StackAllocator() 
     {
-        free(_startPtr);
+        if (!_onlyOffset)
+        {
+            free(_startPtr);
+        }
         _startPtr = nullptr;
     }
 
@@ -66,61 +79,88 @@ namespace Memory
         return padding;
     }
 
-    const std::size_t CalculatePaddingWithHeader(const std::size_t baseAddress, const std::size_t alignment, const std::size_t headerSize) 
-    {
-        std::size_t padding = CalculatePadding(baseAddress, alignment);
-        std::size_t neededSpace = headerSize;
-
-        if (padding < neededSpace) {
-            // Header does not fit - Calculate next aligned address that header fits
-            neededSpace -= padding;
-
-            // How many alignments I need to fit the header        
-            if (neededSpace % alignment > 0) {
-                padding += alignment * (1 + (neededSpace / alignment));
-            }
-            else {
-                padding += alignment * (neededSpace / alignment);
-            }
-        }
-
-        return padding;
-    }
-
     void* StackAllocator::Allocate(const std::size_t size, const std::size_t alignment) 
     {
         assert(_initialized); // We need to initialize this allocator!
 
-        const std::size_t currentAddress = reinterpret_cast<std::size_t>(_startPtr) + _offset;
+        return (void*)(AllocateOffset(size, alignment));
+    }
 
-        std::size_t padding = CalculatePaddingWithHeader(currentAddress, alignment, sizeof(AllocationHeader));
+    bool StackAllocator::TryAllocate(const std::size_t size, const std::size_t alignment, void*& memory)
+    {
+        return TryAllocateOffset(size, alignment, (size_t&)(memory));
+    }
 
-        if (_offset + padding + size > _totalSize) 
+    size_t StackAllocator::AllocateOffset(const std::size_t size, const std::size_t alignment)
+    {
+        assert(_initialized); // We need to initialize this allocator!
+
+        std::size_t currentAddress = 0;
+        std::size_t padding = 0;
+        std::size_t tempOffset = 0;
+
         {
-            DebugHandler::PrintFatal("We overflowed our allocator");
+            std::unique_lock lock(_lock);
 
-            return nullptr;
+            currentAddress = reinterpret_cast<std::size_t>(_startPtr) + _offset.load();
+            padding = CalculatePadding(currentAddress, alignment);
+
+            if (_offset + padding + size > _totalSize)
+            {
+                DebugHandler::PrintFatal("We overflowed our allocator");
+
+                return 0;
+            }
+            tempOffset = _offset.fetch_add(padding + size);
+            _used.store(tempOffset);
         }
-        _offset += padding;
 
         const std::size_t nextAddress = currentAddress + padding;
-        const std::size_t headerAddress = nextAddress - sizeof(AllocationHeader);
-        AllocationHeader allocationHeader{ static_cast<char>(padding) };
-        AllocationHeader* headerPtr = reinterpret_cast<AllocationHeader*>(headerAddress);
-        headerPtr = &allocationHeader;
-
-        _offset += size;
 
 #ifdef _DEBUG
         if (_debug)
         {
-            std::cout << _name << "\tAllocated " << "\t@C " << reinterpret_cast<void*>(currentAddress) << "\t@R " << reinterpret_cast<void*>(nextAddress) << "\tO " << _offset << "\tP " << padding << std::endl;
+            std::cout << _name << "\tAllocated " << "\t@C " << reinterpret_cast<void*>(currentAddress) << "\t@R " << reinterpret_cast<void*>(nextAddress) << "\tO " << tempOffset << "\tP " << padding << std::endl;
         }
 #endif
-        _used = _offset;
-        _peak = std::max(_peak, _used);
+        _peak.store(std::max(_peak.load(), _used.load()));
 
-        return (void*)(nextAddress);
+        return nextAddress;
+    }
+
+    bool StackAllocator::TryAllocateOffset(const std::size_t size, const std::size_t alignment, size_t& offset)
+    {
+        assert(_initialized); // We need to initialize this allocator!
+
+        std::size_t currentAddress = 0;
+        std::size_t padding = 0;
+        std::size_t tempOffset = 0;
+
+        {
+            std::unique_lock lock(_lock);
+
+            currentAddress = reinterpret_cast<std::size_t>(_startPtr) + _offset.load();
+            padding = CalculatePadding(currentAddress, alignment);
+
+            if (_offset + padding + size > _totalSize)
+            {
+                return false;
+            }
+            tempOffset = _offset.fetch_add(padding + size);
+            _used.store(tempOffset);
+        }
+
+        const std::size_t nextAddress = currentAddress + padding;
+
+#ifdef _DEBUG
+        if (_debug)
+        {
+            std::cout << _name << "\tAllocated " << "\t@C " << reinterpret_cast<void*>(currentAddress) << "\t@R " << reinterpret_cast<void*>(nextAddress) << "\tO " << offset << "\tP " << padding << std::endl;
+        }
+#endif
+        _peak.store(std::max(_peak.load(), _used.load()));
+        offset = nextAddress;
+        return true;
     }
 
     void StackAllocator::Free(void* /*ptr*/) 
@@ -130,9 +170,9 @@ namespace Memory
 
     void StackAllocator::Reset() 
     {
-        _offset = 0;
-        _used = 0;
-        _peak = 0;
+        _offset.store(0);
+        _used.store(0);
+        _peak.store(0);
 
 #ifdef _DEBUG
         if (_debug)

@@ -26,7 +26,17 @@
 
 namespace Memory
 {
-    Allocator::Allocator(const std::size_t totalSize, std::string name, bool debug)
+    Allocator::Allocator()
+    {
+        
+    }
+
+    Allocator::~Allocator() 
+    {
+        _totalSize = 0;
+    }
+
+    void Allocator::Init(const std::size_t totalSize, std::string name, bool onlyOffsets, bool debug)
     {
         _totalSize = totalSize;
         _used = 0;
@@ -35,10 +45,6 @@ namespace Memory
         _name = name;
         _debug = debug;
         _initialized = false;
-    }
-
-    Allocator::~Allocator() 
-    {
-        _totalSize = 0;
+        _onlyOffset = onlyOffsets;
     }
 }

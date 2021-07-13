@@ -24,22 +24,32 @@
 */
 #pragma once
 #include "../NovusTypes.h"
+#include <atomic>
 
 namespace Memory
 {
     class Allocator
     {
     public:
-        Allocator(const std::size_t totalSize, std::string name = "", bool debug = false);
+        Allocator();
         virtual ~Allocator();
 
         virtual void* Allocate(const std::size_t size, const std::size_t alignment = 0) = 0;
+        virtual bool TryAllocate(const std::size_t size, const std::size_t alignment, void*& memory) = 0;
+        virtual size_t AllocateOffset(const std::size_t size, const std::size_t alignment = 0) = 0;
+        virtual bool TryAllocateOffset(const std::size_t size, const std::size_t alignment, size_t& offset) = 0;
+
         virtual void Free(void* ptr) = 0;
-        virtual void Init() = 0;
+        virtual void Init(const std::size_t totalSize, std::string name = "", bool onlyOffsets = false, bool debug = false);
 
         template<typename T, typename... Args>
         static T* New(Allocator* allocator, Args&& ... args)
         {
+            if (allocator->_onlyOffset)
+            {
+                DebugHandler::PrintFatal("Tried to Allocator::New with an allocator that is set to onlyOffset and thus has no backing memory");
+            }
+
             void* memory = allocator->Allocate(sizeof(T), 8);
             T* object = new(memory) T(std::forward<Args>(args)...);
 
@@ -49,6 +59,11 @@ namespace Memory
         template<typename T, typename... Args>
         static T* NewArray(Allocator* allocator, size_t count, Args&& ... args)
         {
+            if (allocator->_onlyOffset)
+            {
+                DebugHandler::PrintFatal("Tried to Allocator::New with an allocator that is set to onlyOffset and thus has no backing memory");
+            }
+
             void* memory = allocator->Allocate(sizeof(T) * count, 8);
             T* typedArray = static_cast<T*>(memory);
             
@@ -56,12 +71,13 @@ namespace Memory
         }
 
     protected:
-        std::size_t _totalSize;
-        std::size_t _used;
-        std::size_t _peak;
+        std::atomic<std::size_t> _totalSize;
+        std::atomic<std::size_t> _used;
+        std::atomic<std::size_t> _peak;
 
         bool _debug;
-        bool _initialized;
+        bool _initialized = false;
+        bool _onlyOffset = false;
         std::string _name;
     };
 }

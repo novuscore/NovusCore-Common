@@ -17,6 +17,7 @@ public:
     void Reset();
 
     bool Allocate(size_t size, BufferRangeFrame& frame);
+    bool Allocate(size_t size, size_t alignment, BufferRangeFrame& frame);
     bool Free(const BufferRangeFrame& frame);
     bool Grow(size_t newSize);
 
